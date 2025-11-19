@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/jpeg" href="/assets/logo-499e67ff.jpg" />
+    <link rel="apple-touch-icon" href="/assets/logo-499e67ff.jpg" />
+    
+    <!-- Primary Meta Tags -->
+    <title>รู้ทันช่าง - ระบบตรวจสอบบัญชีดำช่างมืออาชีพ</title>
+    <meta name="title" content="รู้ทันช่าง - ระบบตรวจสอบบัญชีดำช่างมืออาชีพ" />
+    <meta name="description" content="ตรวจสอบประวัติช่างก่อนจ้างงาน ระบบฐานข้อมูลบัญชีดำช่างมืออาชีพ ป้องกันการถูกโกง ค้นหาข้อมูลช่างที่น่าเชื่อถือ เพื่อความมั่นใจในการจ้างงาน" />
+    <meta name="keywords" content="ตรวจสอบช่าง, บัญชีดำช่าง, ช่างมืออาชีพ, รู้ทันช่าง, ช่างโกง, ตรวจสอบประวัติช่าง, ฐานข้อมูลช่าง, ช่างทิ้งงาน" />
+    <meta name="author" content="รู้ทันช่าง" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Thai" />
+    <meta name="revisit-after" content="7 days" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.ตรวจสอบช่าง.com/" />
+    <meta property="og:title" content="รู้ทันช่าง - ระบบตรวจสอบบัญชีดำช่างมืออาชีพ" />
+    <meta property="og:description" content="ตรวจสอบประวัติช่างก่อนจ้างงาน ระบบฐานข้อมูลบัญชีดำช่างมืออาชีพ ป้องกันการถูกโกง" />
+    <meta property="og:image" content="/src/assest/logo.jpg" />
+    <meta property="og:locale" content="th_TH" />
+    <meta property="og:site_name" content="รู้ทันช่าง" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://www.ตรวจสอบช่าง.com/" />
+    <meta property="twitter:title" content="รู้ทันช่าง - ระบบตรวจสอบบัญชีดำช่างมืออาชีพ" />
+    <meta property="twitter:description" content="ตรวจสอบประวัติช่างก่อนจ้างงาน ระบบฐานข้อมูลบัญชีดำช่างมืออาชีพ ป้องกันการถูกโกง" />
+    <meta property="twitter:image" content="/src/assest/logo.jpg" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="msapplication-TileColor" content="#000000" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet" />
+    
+    <!-- Preload Critical Assets -->
+    <link rel="preload" href="/assets/logo-499e67ff.jpg" as="image" />
+    <script type="module" crossorigin src="/assets/index-04e4ea19.js"></script>
+    <link rel="stylesheet" href="/assets/index-7ef26311.css">
+    <script type="module">
+window.onerror = (message, source, lineno, colno, errorObj) => {
+	const errorDetails = errorObj ? JSON.stringify({
+		name: errorObj.name,
+		message: errorObj.message,
+		stack: errorObj.stack,
+		source,
+		lineno,
+		colno,
+	}) : null;
+
+	window.parent.postMessage({
+		type: 'horizons-runtime-error',
+		message,
+		error: errorDetails
+	}, '*');
+};
+</script>
+    <script type="module">
+const observer = new MutationObserver((mutations) => {
+	for (const mutation of mutations) {
+		for (const addedNode of mutation.addedNodes) {
+			if (
+				addedNode.nodeType === Node.ELEMENT_NODE &&
+				(
+					addedNode.tagName?.toLowerCase() === 'vite-error-overlay' ||
+					addedNode.classList?.contains('backdrop')
+				)
+			) {
+				handleViteOverlay(addedNode);
+			}
+		}
+	}
+});
+
+observer.observe(document.documentElement, {
+	childList: true,
+	subtree: true
+});
+
+function handleViteOverlay(node) {
+	if (!node.shadowRoot) {
+		return;
+	}
+
+	const backdrop = node.shadowRoot.querySelector('.backdrop');
+
+	if (backdrop) {
+		const overlayHtml = backdrop.outerHTML;
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(overlayHtml, 'text/html');
+		const messageBodyElement = doc.querySelector('.message-body');
+		const fileElement = doc.querySelector('.file');
+		const messageText = messageBodyElement ? messageBodyElement.textContent.trim() : '';
+		const fileText = fileElement ? fileElement.textContent.trim() : '';
+		const error = messageText + (fileText ? ' File:' + fileText : '');
+
+		window.parent.postMessage({
+			type: 'horizons-vite-error',
+			error,
+		}, '*');
+	}
+}
+</script>
+    <script type="module">
+const originalConsoleError = console.error;
+console.error = function(...args) {
+	originalConsoleError.apply(console, args);
+
+	let errorString = '';
+
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		if (arg instanceof Error) {
+			errorString = arg.stack || `${arg.name}: ${arg.message}`;
+			break;
+		}
+	}
+
+	if (!errorString) {
+		errorString = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+	}
+
+	window.parent.postMessage({
+		type: 'horizons-console-error',
+		error: errorString
+	}, '*');
+};
+</script>
+    <script type="module">
+const originalFetch = window.fetch;
+
+window.fetch = function(...args) {
+	const url = args[0] instanceof Request ? args[0].url : args[0];
+
+	// Skip WebSocket URLs
+	if (url.startsWith('ws:') || url.startsWith('wss:')) {
+		return originalFetch.apply(this, args);
+	}
+
+	return originalFetch.apply(this, args)
+		.then(async response => {
+			const contentType = response.headers.get('Content-Type') || '';
+
+			// Exclude HTML document responses
+			const isDocumentResponse =
+				contentType.includes('text/html') ||
+				contentType.includes('application/xhtml+xml');
+
+			if (!response.ok && !isDocumentResponse) {
+					const responseClone = response.clone();
+					const errorFromRes = await responseClone.text();
+					const requestUrl = response.url;
+					console.error(`Fetch error from ${requestUrl}: ${errorFromRes}`);
+			}
+
+			return response;
+		})
+		.catch(error => {
+			if (!url.match(/.html?$/i)) {
+				console.error(error);
+			}
+
+			throw error;
+		});
+};
+</script>
+    <script type="module">
+if (window.navigation && window.self !== window.top) {
+	window.navigation.addEventListener('navigate', (event) => {
+		const url = event.destination.url;
+
+		try {
+			const destinationUrl = new URL(url);
+			const destinationOrigin = destinationUrl.origin;
+			const currentOrigin = window.location.origin;
+
+			if (destinationOrigin === currentOrigin) {
+				return;
+			}
+		} catch (error) {
+			return;
+		}
+
+		window.parent.postMessage({
+			type: 'horizons-navigation-error',
+			url,
+		}, '*');
+	});
+}
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+    
+  </body>
+</html>
