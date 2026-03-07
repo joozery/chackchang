@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +17,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/lib/hooks/use-auth';
-import { Lock, User, Shield, FileText, Mail, Phone, Calendar } from 'lucide-react';
+import { Lock, User, Shield, FileText, Mail, Phone, Calendar, Image, Link2, MessageCircle, Upload, X } from 'lucide-react';
 import logo from '@/assest/logo.jpg';
 
-const AuthForm = ({ isLogin, onSubmit }) => {
+const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -29,6 +30,59 @@ const AuthForm = ({ isLogin, onSubmit }) => {
   const [birthDate, setBirthDate] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [registerAsTechnician, setRegisterAsTechnician] = useState(isTechnician);
+  
+  // Technician specific fields
+  const [profileImage, setProfileImage] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState([]);
+  const [lineId, setLineId] = useState('');
+  const [facebookLink, setFacebookLink] = useState('');
+
+  // Work types options
+  const workTypes = [
+    'ซ่อมบ้าน',
+    'ทาสี',
+    'ติดตั้งแอร์',
+    'งานไฟฟ้า',
+    'งานประปา',
+    'ปูกระเบื้อง',
+    'ทำหลังคา',
+    'ตกแต่งภายใน',
+    'ทำรั้ว',
+    'อื่นๆ'
+  ];
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        alert('กรุณาเลือกรูปภาพเท่านั้น');
+        return;
+      }
+      setProfileImage(file);
+      setProfileImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setProfileImage(null);
+    setProfileImagePreview(null);
+  };
+
+  const toggleWorkType = useCallback((workType) => {
+    setSelectedWorkTypes(prev => {
+      if (prev.includes(workType)) {
+        return prev.filter(type => type !== workType);
+      } else {
+        return [...prev, workType];
+      }
+    });
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -40,13 +94,39 @@ const AuthForm = ({ isLogin, onSubmit }) => {
     if (isLogin) {
       onSubmit(username, password);
     } else {
-      onSubmit(username, password, { firstName, lastName, email, phone, birthDate });
+      const formData = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        birthDate,
+        isTechnician: registerAsTechnician
+      };
+
+      if (registerAsTechnician) {
+        // Validate technician fields
+        if (!profileImage) {
+          alert('กรุณาอัปโหลดรูปภาพโปรไฟล์');
+          return;
+        }
+        if (selectedWorkTypes.length === 0) {
+          alert('กรุณาเลือกประเภทงานอย่างน้อย 1 ประเภท');
+          return;
+        }
+        
+        formData.profileImage = profileImage;
+        formData.workTypes = selectedWorkTypes;
+        formData.lineId = lineId;
+        formData.facebookLink = facebookLink;
+      }
+
+      onSubmit(username, password, formData);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <CardContent className="space-y-5 pt-6 max-h-[60vh] overflow-y-auto">
+      <CardContent className="space-y-5 pt-6">
         <div className="space-y-2">
           <Label htmlFor="username" className="text-sm font-medium text-gray-700">
             ชื่อผู้ใช้
@@ -174,6 +254,150 @@ const AuthForm = ({ isLogin, onSubmit }) => {
                 />
               </div>
             </div>
+
+            {/* Technician Registration Option */}
+            <div className="space-y-2">
+              <div className="flex items-start space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <Checkbox 
+                  id="technician" 
+                  checked={registerAsTechnician}
+                  onCheckedChange={(checked) => {
+                    setRegisterAsTechnician(checked === true);
+                  }}
+                  className="mt-1"
+                />
+                <label 
+                  htmlFor="technician" 
+                  className="text-sm text-gray-700 leading-relaxed cursor-pointer flex-1"
+                >
+                  <span className="font-semibold text-green-700">สมัครเป็นช่าง</span>
+                  <span className="block text-gray-600 mt-1">
+                    เลือกเพื่อสร้างโปรไฟล์ช่างและแสดงในระบบช่างรับงานดี
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Technician Additional Fields */}
+            {registerAsTechnician && (
+              <div className="space-y-5 pt-4 border-t border-gray-200">
+                {/* Profile Image Upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="profileImage" className="text-sm font-medium text-gray-700">
+                    รูปภาพโปรไฟล์ <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="space-y-3">
+                    {profileImagePreview ? (
+                      <div className="relative inline-block">
+                        <img 
+                          src={profileImagePreview} 
+                          alt="Preview" 
+                          className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label
+                        htmlFor="profileImage"
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">คลิกเพื่ออัปโหลด</span> หรือลากวาง
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF (ขนาดไม่เกิน 5MB)</p>
+                        </div>
+                        <input
+                          id="profileImage"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Work Types Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    ประเภทงานที่รับ <span className="text-red-500">*</span>
+                  </Label>
+                  <p className="text-xs text-gray-500 mb-3">เลือกได้หลายประเภท</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {workTypes.map((workType) => {
+                      const isSelected = selectedWorkTypes.includes(workType);
+                      return (
+                        <div
+                          key={workType}
+                          className={`flex items-center space-x-2 p-3 border-2 rounded-lg transition-all ${
+                            isSelected
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <Checkbox
+                            id={`worktype-${workType}`}
+                            checked={isSelected}
+                            onCheckedChange={() => toggleWorkType(workType)}
+                          />
+                          <label 
+                            htmlFor={`worktype-${workType}`}
+                            className="text-sm text-gray-700 cursor-pointer flex-1"
+                          >
+                            {workType}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Line ID */}
+                <div className="space-y-2">
+                  <Label htmlFor="lineId" className="text-sm font-medium text-gray-700">
+                    Line ID
+                  </Label>
+                  <div className="relative">
+                    <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input 
+                      id="lineId" 
+                      type="text" 
+                      placeholder="กรอก Line ID (ถ้ามี)" 
+                      value={lineId} 
+                      onChange={(e) => setLineId(e.target.value)}
+                      className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
+                    />
+                  </div>
+                </div>
+
+                {/* Facebook Link */}
+                <div className="space-y-2">
+                  <Label htmlFor="facebookLink" className="text-sm font-medium text-gray-700">
+                    ลิงก์ Facebook
+                  </Label>
+                  <div className="relative">
+                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input 
+                      id="facebookLink" 
+                      type="url" 
+                      placeholder="https://www.facebook.com/..." 
+                      value={facebookLink} 
+                      onChange={(e) => setFacebookLink(e.target.value)}
+                      className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="flex items-start space-x-2">
@@ -350,6 +574,15 @@ const AuthForm = ({ isLogin, onSubmit }) => {
 
 export function AuthPage() {
   const { login, register } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isTechnicianParam = searchParams.get('register') === 'technician';
+  const [defaultTab, setDefaultTab] = useState('login');
+
+  useEffect(() => {
+    if (isTechnicianParam) {
+      setDefaultTab('register');
+    }
+  }, [isTechnicianParam]);
 
   return (
     <>
@@ -400,7 +633,7 @@ export function AuthPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Tabs defaultValue="login" className="w-full">
+            <Tabs value={defaultTab} onValueChange={setDefaultTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4 bg-white shadow-md p-1 h-12">
                 <TabsTrigger 
                   value="login"
@@ -429,14 +662,14 @@ export function AuthPage() {
               </TabsContent>
               
               <TabsContent value="register">
-                <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/90">
-                  <CardHeader className="space-y-1 pb-4">
+                <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/90 max-h-[90vh] overflow-y-auto">
+                  <CardHeader className="space-y-1 pb-4 sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200">
                     <CardTitle className="text-2xl font-bold text-gray-900">สมัครสมาชิก</CardTitle>
                     <CardDescription className="text-gray-600">
                       สร้างบัญชีใหม่เพื่อเริ่มใช้งาน
                     </CardDescription>
                   </CardHeader>
-                  <AuthForm isLogin={false} onSubmit={register} />
+                  <AuthForm isLogin={false} onSubmit={register} isTechnician={isTechnicianParam} />
                 </Card>
               </TabsContent>
             </Tabs>

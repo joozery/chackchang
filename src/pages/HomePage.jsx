@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Search, Frown, AlertTriangle, Calendar, User, Eye, Grid3x3, List, Hash, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import blacklistService from '@/services/blacklistService';
 
 const initialBlacklist = [
   { 
@@ -90,12 +91,29 @@ export function HomePage() {
   const [blacklist, setBlacklist] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Fetch blacklist data from API
   useEffect(() => {
-    // Always use the new data structure with updated fields
-    setBlacklist(initialBlacklist);
-    localStorage.setItem('technician-blacklist', JSON.stringify(initialBlacklist));
+    const fetchBlacklist = async () => {
+      try {
+        setLoading(true);
+        const data = await blacklistService.getApproved();
+        setBlacklist(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching blacklist:', err);
+        setError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+        // Fallback to initial data if API fails
+        setBlacklist(initialBlacklist);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBlacklist();
   }, []);
 
   const filteredBlacklist = searchTerm

@@ -6,20 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { User, Calendar, AlertTriangle, ArrowLeft, Frown, Hash, DollarSign, Clock, TrendingUp, FileText, Image as ImageIcon, Shield, CreditCard, Briefcase } from 'lucide-react';
+import blacklistService from '@/services/blacklistService';
 
 const DetailPage = () => {
   const { id } = useParams();
   const [entry, setEntry] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const storedBlacklist = localStorage.getItem('technician-blacklist');
-    if (storedBlacklist) {
-      const blacklist = JSON.parse(storedBlacklist);
-      const foundEntry = blacklist.find((item) => item.id.toString() === id);
-      setEntry(foundEntry);
-    }
-    setLoading(false);
+    const fetchEntry = async () => {
+      try {
+        setLoading(true);
+        const data = await blacklistService.getById(id);
+        setEntry(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching entry:', err);
+        setError('ไม่สามารถโหลดข้อมูลได้');
+        setEntry(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEntry();
   }, [id]);
 
   if (loading) {

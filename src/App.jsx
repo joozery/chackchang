@@ -10,14 +10,16 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { Toaster } from "@/components/ui/toaster";
 
 // Public Pages
+import { LandingPage } from '@/pages/LandingPage';
 import { HomePage } from '@/pages/HomePage';
+import { GoodWorkersPage } from '@/pages/GoodWorkersPage';
 import DetailPage from '@/pages/DetailPage';
 import { AuthPage } from '@/pages/AuthPage';
 import { AdminLoginPage } from '@/pages/AdminLoginPage';
 import ReportPage from '@/pages/ReportPage';
+import UserAccountPage from '@/pages/UserAccountPage';
 
 // Admin Pages
-import { DashboardPage } from '@/pages/DashboardPage';
 import ManageBlacklistPage from '@/pages/admin/ManageBlacklistPage';
 import ManageUsersPage from '@/pages/admin/ManageUsersPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
@@ -34,10 +36,12 @@ const PublicLayout = () => (
         <main className="flex-grow">
             <AnimatePresence mode="wait">
                 <Routes>
-                    <Route path="/" element={<HomePage />} />
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/good-workers" element={<GoodWorkersPage />} />
                     <Route path="/detail/:id" element={<DetailPage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/report" element={<ReportPage />} />
+                    <Route path="/account" element={<UserAccountPage />} />
                     <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
             </AnimatePresence>
@@ -53,6 +57,9 @@ function App() {
         <AuthProvider>
             <div className="bg-background text-foreground font-sans">
                 <Routes>
+                     {/* Landing Page - Full Screen (No Navbar/Footer) */}
+                     <Route path="/" element={<LandingPage />} />
+                     
                      {/* Admin Login - Full Screen (No Navbar/Footer) */}
                      <Route path="/admin/login" element={<AdminLoginPage />} />
                      
@@ -62,7 +69,7 @@ function App() {
                             <AdminLayout />
                         </PrivateRoute>
                      }>
-                        <Route index element={<DashboardPage />} />
+                        <Route index element={<Navigate to="/dashboard/blacklist" replace />} />
                         <Route path="blacklist" element={<ManageBlacklistPage />} />
                         <Route path="users" element={<ManageUsersPage />} />
                         <Route path="settings" element={<SettingsPage />} />

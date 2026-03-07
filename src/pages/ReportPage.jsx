@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle, Upload, X, CheckCircle, ArrowLeft } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import blacklistService from '@/services/blacklistService';
 
 const ReportPage = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const ReportPage = () => {
     setImages(prev => prev.filter(img => img.id !== id));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate required fields
@@ -63,33 +64,44 @@ const ReportPage = () => {
       return;
     }
 
-    // Create new entry
-    const newEntry = {
-      id: Date.now(),
-      ...formData,
-      reportId: Date.now().toString().slice(-6),
-      date: new Date().toISOString().split('T')[0],
-      status: 'pending',
-      images: images.map(img => img.url),
-      reportCount: 1,
-      totalAmount: parseInt(formData.amount) || 0,
-    };
+    try {
+      // Prepare data for API
+      const dataToSend = {
+        name: formData.name,
+        idCard: formData.idCard,
+        offense: formData.offense,
+        workType: formData.workType,
+        reportedBy: formData.reportedBy,
+        bankAccount: formData.bankAccount,
+        bankName: formData.bankName,
+        transferDate: formData.transferDate,
+        postedDate: formData.postedDate ? `${formData.postedDate} 00:00:00` : null,
+        amount: parseFloat(formData.amount) || 0,
+        description: formData.description,
+        reportCount: 1,
+        totalAmount: parseFloat(formData.amount) || 0,
+      };
 
-    // Save to localStorage
-    const storedBlacklist = localStorage.getItem('technician-blacklist');
-    const blacklist = storedBlacklist ? JSON.parse(storedBlacklist) : [];
-    blacklist.unshift(newEntry);
-    localStorage.setItem('technician-blacklist', JSON.stringify(blacklist));
+      // Send to API
+      await blacklistService.create(dataToSend);
 
-    toast({
-      title: "✅ แจ้งข้อมูลสำเร็จ",
-      description: "ขอบคุณที่แจ้งข้อมูล รายงานของคุณจะถูกตรวจสอบโดยเร็วที่สุด",
-    });
+      toast({
+        title: "✅ แจ้งข้อมูลสำเร็จ",
+        description: "ขอบคุณที่แจ้งข้อมูล รายงานของคุณจะถูกตรวจสอบโดยเร็วที่สุด",
+      });
 
-    // Redirect to home
-    setTimeout(() => {
-      navigate('/');
-    }, 2000);
+      // Redirect to home
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      toast({
+        title: "❌ เกิดข้อผิดพลาด",
+        description: "ไม่สามารถส่งรายงานได้ กรุณาลองใหม่อีกครั้ง",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

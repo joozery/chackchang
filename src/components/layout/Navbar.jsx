@@ -102,35 +102,40 @@ const Navbar = () => {
 
                   <div className="w-px h-6 bg-gray-700" />
 
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => navigate('/dashboard')}
-                      className="text-white hover:bg-white/10 hover:text-blue-400 transition-all duration-300 group relative overflow-hidden"
+                  {/* Show different button based on role */}
+                  {user.role === 'admin' ? (
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                      <LayoutDashboard className="mr-2 h-4 w-4 relative z-10" />
-                      <span className="relative z-10">แดชบอร์ด</span>
-                    </Button>
-                  </motion.div>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => navigate('/dashboard/blacklist')}
+                        className="text-white hover:bg-white/10 hover:text-blue-400 transition-all duration-300 group relative overflow-hidden"
+                      >
+                        <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                        <LayoutDashboard className="mr-2 h-4 w-4 relative z-10" />
+                        <span className="relative z-10">แดชบอร์ด</span>
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button 
+                        variant="ghost"
+                        onClick={() => navigate('/account')}
+                        className="text-white hover:bg-white/10 hover:text-green-400 transition-all duration-300 group relative overflow-hidden"
+                      >
+                        <span className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                        <User className="mr-2 h-4 w-4 relative z-10" />
+                        <span className="relative z-10 max-w-[120px] truncate">{user.username || user.email || 'บัญชี'}</span>
+                      </Button>
+                    </motion.div>
+                  )}
                   
                   <div className="w-px h-6 bg-gray-700" />
-                  
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button 
-                      variant="ghost"
-                      className="text-white hover:bg-white/10 transition-all duration-300 group"
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      <span className="max-w-[100px] truncate">{user.email || 'ผู้ใช้งาน'}</span>
-                    </Button>
-                  </motion.div>
 
                   <motion.div
                     whileHover={{ scale: 1.02 }}
@@ -218,23 +223,38 @@ const Navbar = () => {
 
               <div className="border-t border-gray-800 my-2" />
 
-              <Button 
-                variant="ghost" 
-                onClick={() => {
-                  navigate('/dashboard');
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full justify-start text-white hover:bg-white/10 hover:text-blue-400 transition-all"
-              >
-                <LayoutDashboard className="mr-3 h-5 w-5" />
-                แดชบอร์ด
-              </Button>
+              {/* Show different button based on role */}
+              {user.role === 'admin' ? (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    navigate('/dashboard/blacklist');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-start text-white hover:bg-white/10 hover:text-blue-400 transition-all"
+                >
+                  <LayoutDashboard className="mr-3 h-5 w-5" />
+                  แดชบอร์ด
+                </Button>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    navigate('/account');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-start text-white hover:bg-white/10 hover:text-green-400 transition-all"
+                >
+                  <User className="mr-3 h-5 w-5" />
+                  บัญชี
+                </Button>
+              )}
               
               <div className="border-t border-gray-800 my-2" />
               
               <div className="px-4 py-2 text-sm text-gray-400">
                 <User className="inline-block mr-2 h-4 w-4" />
-                {user.email || 'ผู้ใช้งาน'}
+                {user.username || user.email || 'ผู้ใช้งาน'}
               </div>
               
               <Button 

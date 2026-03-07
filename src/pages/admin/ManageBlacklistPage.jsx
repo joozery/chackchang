@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import blacklistService from '@/services/blacklistService';
 import {
   Table,
   TableBody,
@@ -163,46 +164,103 @@ const ManageBlacklistPage = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editEntry, setEditEntry] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [loading, setLoading] = useState(true);
     const itemsPerPage = 10;
 
+    // Fetch blacklist from API
     useEffect(() => {
-        const storedBlacklist = localStorage.getItem('technician-blacklist');
-        if (storedBlacklist && JSON.parse(storedBlacklist).length > 0) {
-        setBlacklist(JSON.parse(storedBlacklist));
-        } else {
-        setBlacklist(initialBlacklist);
-        }
+        const fetchBlacklist = async () => {
+            try {
+                setLoading(true);
+                const data = await blacklistService.getAll({ status: statusFilter, search: searchTerm });
+                setBlacklist(data);
+            } catch (error) {
+                console.error('Error fetching blacklist:', error);
+                toast({
+                    title: "❌ เกิดข้อผิดพลาด",
+                    description: "ไม่สามารถโหลดข้อมูลได้",
+                    variant: "destructive",
+                });
+                // Fallback to initial data
+                setBlacklist(initialBlacklist);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBlacklist();
     }, []);
 
-    useEffect(() => {
-        localStorage.setItem('technician-blacklist', JSON.stringify(blacklist));
-    }, [blacklist]);
-
-    const addEntry = (newEntry) => setBlacklist([newEntry, ...blacklist]);
-    
-    const handleEditEntry = (id, updatedData) => {
-        setBlacklist(blacklist.map(entry => 
-            entry.id === id ? { ...entry, ...updatedData } : entry
-        ));
-        setEditEntry(null);
-    };
-
-    const handleDeleteEntry = (id) => {
-        if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบรายงานนี้?')) {
-            setBlacklist(blacklist.filter(entry => entry.id !== id));
+    const addEntry = async (newEntry) => {
+        try {
+            const result = await blacklistService.create(newEntry);
+            // Refresh the list
+            const data = await blacklistService.getAll({ status: statusFilter });
+            setBlacklist(data);
+        } catch (error) {
+            console.error('Error adding entry:', error);
             toast({
-                title: "✅ ลบรายงานสำเร็จ",
-                description: "ลบรายงานออกจากระบบแล้ว",
+                title: "❌ เกิดข้อผิดพลาด",
+                description: "ไม่สามารถเพิ่มข้อมูลได้",
+                variant: "destructive",
             });
         }
     };
     
-    const handleStatusChange = (id, newStatus) => {
-        setBlacklist(blacklist.map(entry => entry.id === id ? { ...entry, status: newStatus } : entry));
-        toast({
-            title: `✅ อัปเดตสถานะสำเร็จ`,
-            description: `คำร้อง #${id.toString().slice(-4)} ถูกเปลี่ยนเป็น ${newStatus}`,
-        })
+    const handleEditEntry = async (id, updatedData) => {
+        try {
+            await blacklistService.update(id, updatedData);
+            // Update local state
+            setBlacklist(blacklist.map(entry => 
+                entry.id === id ? { ...entry, ...updatedData } : entry
+            ));
+            setEditEntry(null);
+        } catch (error) {
+            console.error('Error updating entry:', error);
+            toast({
+                title: "❌ เกิดข้อผิดพลาด",
+                description: "ไม่สามารถแก้ไขข้อมูลได้",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDeleteEntry = async (id) => {
+        if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบรายงานนี้?')) {
+            try {
+                await blacklistService.delete(id);
+                setBlacklist(blacklist.filter(entry => entry.id !== id));
+                toast({
+                    title: "✅ ลบรายงานสำเร็จ",
+                    description: "ลบรายงานออกจากระบบแล้ว",
+                });
+            } catch (error) {
+                console.error('Error deleting entry:', error);
+                toast({
+                    title: "❌ เกิดข้อผิดพลาด",
+                    description: "ไม่สามารถลบข้อมูลได้",
+                    variant: "destructive",
+                });
+            }
+        }
+    };
+    
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            await blacklistService.updateStatus(id, newStatus);
+            setBlacklist(blacklist.map(entry => entry.id === id ? { ...entry, status: newStatus } : entry));
+            toast({
+                title: `✅ อัปเดตสถานะสำเร็จ`,
+                description: `คำร้อง #${id.toString().slice(-4)} ถูกเปลี่ยนเป็น ${newStatus}`,
+            });
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast({
+                title: "❌ เกิดข้อผิดพลาด",
+                description: "ไม่สามารถอัปเดตสถานะได้",
+                variant: "destructive",
+            });
+        }
     };
     
     const filteredBlacklist = useMemo(() =>
