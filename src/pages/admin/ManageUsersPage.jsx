@@ -38,13 +38,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  UserPlus, 
-  Search, 
-  MoreVertical, 
-  Shield, 
-  User, 
-  Mail, 
+import {
+  UserPlus,
+  Search,
+  MoreVertical,
+  Shield,
+  User,
+  Mail,
   Calendar,
   Edit,
   Trash2,
@@ -52,56 +52,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
-  CheckCircle
+  CheckCircle,
+  TrendingUp,
+  AlertCircle,
+  ShieldCheck,
+  ArrowUpRight,
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-
-const initialUsers = [
-  { 
-    id: 1, 
-    username: 'admin', 
-    email: 'admin@ตรวจสอบช่าง.com', 
-    firstName: 'ผู้ดูแล',
-    lastName: 'ระบบ',
-    role: 'admin', 
-    status: 'active', 
-    createdAt: '2025-01-15',
-    lastLogin: '2025-11-19 14:30'
-  },
-  { 
-    id: 2, 
-    username: 'user1', 
-    email: 'user1@email.com', 
-    firstName: 'สมชาย',
-    lastName: 'ใจดี',
-    role: 'user', 
-    status: 'active', 
-    createdAt: '2025-02-20',
-    lastLogin: '2025-11-18 10:15'
-  },
-  { 
-    id: 3, 
-    username: 'moderator1', 
-    email: 'mod@ตรวจสอบช่าง.com', 
-    firstName: 'สมหญิง',
-    lastName: 'รักษาการ',
-    role: 'moderator', 
-    status: 'active', 
-    createdAt: '2025-03-10',
-    lastLogin: '2025-11-19 09:00'
-  },
-  { 
-    id: 4, 
-    username: 'user2', 
-    email: 'user2@email.com', 
-    firstName: 'ประวิทย์',
-    lastName: 'สุขใจ',
-    role: 'user', 
-    status: 'inactive', 
-    createdAt: '2025-04-05',
-    lastLogin: '2025-10-28 16:45'
-  },
-];
+import userService from '@/services/userService';
 
 const UserForm = ({ onAddUser, editUser, onEditUser, open, setOpen }) => {
   const [formData, setFormData] = useState({
@@ -112,6 +72,7 @@ const UserForm = ({ onAddUser, editUser, onEditUser, open, setOpen }) => {
     lastName: '',
     role: 'user',
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (editUser) {
@@ -135,9 +96,8 @@ const UserForm = ({ onAddUser, editUser, onEditUser, open, setOpen }) => {
     }
   }, [editUser]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!formData.username || !formData.email || !formData.firstName || !formData.lastName) {
       toast({
         title: "ข้อมูลไม่ครบถ้วน",
@@ -146,128 +106,84 @@ const UserForm = ({ onAddUser, editUser, onEditUser, open, setOpen }) => {
       });
       return;
     }
-
     if (!editUser && !formData.password) {
-      toast({
-        title: "กรุณากรอกรหัสผ่าน",
-        description: "รหัสผ่านจำเป็นสำหรับผู้ใช้ใหม่",
-        variant: "destructive",
-      });
+      toast({ title: "กรุณากรอกรหัสผ่าน", variant: "destructive" });
       return;
     }
 
-    if (editUser) {
-      onEditUser(editUser.id, formData);
-      toast({
-        title: "✅ แก้ไขข้อมูลสำเร็จ",
-        description: `อัปเดตข้อมูลผู้ใช้ ${formData.username} แล้ว`,
-      });
-    } else {
-      onAddUser(formData);
-      toast({
-        title: "✅ เพิ่มผู้ใช้สำเร็จ",
-        description: `เพิ่มผู้ใช้ ${formData.username} เข้าระบบแล้ว`,
-      });
+    setLoading(true);
+    try {
+      if (editUser) {
+        await onEditUser(editUser.id, formData);
+        toast({ title: "แก้ไขข้อมูลสำเร็จ" });
+      } else {
+        await onAddUser(formData);
+        toast({ title: "เพิ่มผู้ใช้สำเร็จ" });
+      }
+      setOpen(false);
+    } catch (error) {
+      console.error('Form handle error:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    setFormData({
-      username: '',
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      role: 'user',
-    });
-    setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gray-900 hover:bg-gray-800 text-white">
-          <UserPlus className="mr-2 h-4 w-4" />
-          เพิ่มผู้ใช้ใหม่
+        <Button className="bg-[#FF6B35] hover:bg-[#E85D2A] text-white rounded-xl px-5 h-11 shadow-lg shadow-orange-100 transition-all hover:-translate-y-0.5">
+          <UserPlus className="mr-2 h-4 w-4" /> เพิ่มผู้ใช้ใหม่
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="sm:max-w-[500px] rounded-2xl border-none shadow-2xl overflow-hidden p-0">
+        <div className="bg-gray-900 p-6 text-white text-center">
           <DialogHeader>
-            <DialogTitle>{editUser ? 'แก้ไขข้อมูลผู้ใช้' : 'เพิ่มผู้ใช้ใหม่'}</DialogTitle>
-            <DialogDescription>
-              กรอกข้อมูลผู้ใช้เพื่อเพิ่มเข้าระบบ
+            <DialogTitle className="text-xl font-bold">{editUser ? 'แก้ไขข้อมูลผู้ใช้' : 'สร้างบัญชีผู้ใช้ใหม่'}</DialogTitle>
+            <DialogDescription className="text-gray-400 mt-1 text-xs">
+              กำหนดสิทธิ์และข้อมูลเบื้องต้นสำหรับเข้าใช้งานระบบ CheckChang
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">ชื่อจริง</Label>
-                <Input 
-                  id="firstName" 
-                  value={formData.firstName} 
-                  onChange={(e) => setFormData({...formData, firstName: e.target.value})} 
-                  placeholder="ชื่อจริง" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">นามสกุล</Label>
-                <Input 
-                  id="lastName" 
-                  value={formData.lastName} 
-                  onChange={(e) => setFormData({...formData, lastName: e.target.value})} 
-                  placeholder="นามสกุล" 
-                />
-              </div>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-700">ชื่อจริง</Label>
+              <Input value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="ภาษาไทย/อังกฤษ" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">ชื่อผู้ใช้</Label>
-              <Input 
-                id="username" 
-                value={formData.username} 
-                onChange={(e) => setFormData({...formData, username: e.target.value})} 
-                placeholder="username" 
-                disabled={!!editUser}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">อีเมล</Label>
-              <Input 
-                id="email" 
-                type="email"
-                value={formData.email} 
-                onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                placeholder="email@example.com" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">รหัสผ่าน {editUser && '(เว้นว่างหากไม่เปลี่ยน)'}</Label>
-              <Input 
-                id="password" 
-                type="password"
-                value={formData.password} 
-                onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                placeholder={editUser ? "••••••••" : "รหัสผ่าน"} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">บทบาท</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="เลือกบทบาท" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">ผู้ใช้ทั่วไป</SelectItem>
-                  <SelectItem value="moderator">ผู้ดูแล</SelectItem>
-                  <SelectItem value="admin">ผู้ดูแลระบบ</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-700">นามสกุล</Label>
+              <Input value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="ภาษาไทย/อังกฤษ" />
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              ยกเลิก
-            </Button>
-            <Button type="submit" className="bg-gray-900 hover:bg-gray-800">
-              {editUser ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้'}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">ชื่อผู้ใช้ (Username)</Label>
+            <Input value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="เช่น user_name" disabled={!!editUser} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">อีเมล (Email)</Label>
+            <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="example@checkchang.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">รหัสผ่าน {editUser && '(เว้นว่างหากไม่ต้องการเปลี่ยน)'}</Label>
+            <Input type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="••••••••" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-gray-700">บทบาทในระบบ</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <SelectTrigger className="rounded-lg bg-gray-50 border-none py-5 focus:ring-[#FF6B35] text-sm">
+                <SelectValue placeholder="เลือกบทบาท" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-none shadow-xl">
+                <SelectItem value="user" className="text-xs">ผู้ใช้ทั่วไป</SelectItem>
+                <SelectItem value="moderator" className="text-xs">ผู้ดูแล</SelectItem>
+                <SelectItem value="admin" className="text-xs">ผู้ดูแลระบบ</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="ghost" className="rounded-lg px-6 h-10 text-xs font-bold" onClick={() => setOpen(false)}>ยกเลิก</Button>
+            <Button type="submit" className="bg-[#FF6B35] hover:bg-[#E85D2A] text-white rounded-lg px-8 h-10 shadow-lg shadow-orange-100 text-xs font-bold">
+              {editUser ? 'บันทึกการแก้ไข' : 'สร้างผู้ใช้งาน'}
             </Button>
           </DialogFooter>
         </form>
@@ -278,387 +194,373 @@ const UserForm = ({ onAddUser, editUser, onEditUser, open, setOpen }) => {
 
 const ManageUsersPage = () => {
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await userService.getAll();
+      if (response.success) {
+        setUsers(response.data);
+      }
+    } catch (error) {
+      console.error('Fetch users error:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถดึงข้อมูลสมาชิกได้",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const storedUsers = localStorage.getItem('system-users');
-    if (storedUsers && JSON.parse(storedUsers).length > 0) {
-      setUsers(JSON.parse(storedUsers));
-    } else {
-      setUsers(initialUsers);
-    }
+    fetchUsers();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('system-users', JSON.stringify(users));
-  }, [users]);
-
-  const addUser = (userData) => {
-    const newUser = {
-      ...userData,
-      id: Date.now(),
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0],
-      lastLogin: '-',
-    };
-    setUsers([...users, newUser]);
-  };
-
-  const handleEditUser = (userId, userData) => {
-    setUsers(users.map(user => 
-      user.id === userId ? { ...user, ...userData } : user
-    ));
-    setEditUser(null);
-  };
-
-  const handleDeleteUser = (userId) => {
-    if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?')) {
-      setUsers(users.filter(user => user.id !== userId));
-      toast({
-        title: "✅ ลบผู้ใช้สำเร็จ",
-        description: "ลบผู้ใช้ออกจากระบบแล้ว",
-      });
+  const addUser = async (userData) => {
+    try {
+      const response = await userService.create(userData);
+      if (response.success) {
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error('Add user error:', error);
+      throw error;
     }
   };
 
-  const handleToggleStatus = (userId) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-        : user
-    ));
-    toast({
-      title: "✅ เปลี่ยนสถานะสำเร็จ",
-      description: "อัปเดตสถานะผู้ใช้แล้ว",
-    });
+  const handleEditUser = async (userId, userData) => {
+    try {
+      const response = await userService.update(userId, userData);
+      if (response.success) {
+        fetchUsers();
+        setEditUser(null);
+      }
+    } catch (error) {
+      console.error('Edit user error:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?')) {
+      try {
+        const response = await userService.delete(userId);
+        if (response.success) {
+          fetchUsers();
+          toast({ title: "ลบผู้ใช้เรียบร้อยแล้ว" });
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+    }
+  };
+
+  const handleToggleStatus = async (userId) => {
+    try {
+      const response = await userService.toggleStatus(userId);
+      if (response.success) {
+        fetchUsers();
+        toast({ title: "อัปเดตสถานะผู้ใช้เรียบร้อยแล้ว" });
+      }
+    } catch (error) {
+      console.error('Toggle status error:', error);
+    }
   };
 
   const filteredUsers = useMemo(() =>
     users.filter(user => {
-      const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (user.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (`${user.firstName || ''} ${user.lastName || ''}`).toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-      const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? user.isActive === 1 : user.isActive === 0);
       return matchesSearch && matchesRole && matchesStatus;
     }), [users, searchTerm, roleFilter, statusFilter]
   );
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredUsers, currentPage, itemsPerPage]);
+  }, [filteredUsers, currentPage]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, roleFilter, statusFilter]);
-
-  // Export to CSV
-  const handleExport = () => {
-    const headers = ['ชื่อผู้ใช้', 'อีเมล', 'ชื่อ-นามสกุล', 'เบอร์โทร', 'บทบาท', 'สถานะ'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredUsers.map(user => [
-        user.username,
-        user.email,
-        `${user.firstName} ${user.lastName}`,
-        user.phone,
-        user.role,
-        user.status
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `users_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-
-    toast({
-      title: "✅ ส่งออกข้อมูลสำเร็จ",
-      description: `ส่งออกข้อมูล ${filteredUsers.length} รายการ`,
-    });
-  };
+  const stats = useMemo(() => ({
+    total: users.length,
+    active: users.filter(u => u.isActive === 1).length,
+    admin: users.filter(u => u.role === 'admin').length,
+    newUsers: users.filter(u => new Date(u.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
+  }), [users]);
 
   const getRoleBadge = (role) => {
     switch (role) {
-      case 'admin': return <Badge className="bg-red-600 text-white">ผู้ดูแลระบบ</Badge>;
-      case 'moderator': return <Badge className="bg-blue-600 text-white">ผู้ดูแล</Badge>;
-      case 'user': return <Badge variant="secondary" className="bg-gray-200 text-gray-800">ผู้ใช้ทั่วไป</Badge>;
-      default: return <Badge variant="outline">ไม่ระบุ</Badge>;
+      case 'admin': return <Badge className="bg-red-50 text-red-600 border-none text-[10px] font-bold px-2.5 py-1">ผู้ดูแลระบบ</Badge>;
+      case 'moderator': return <Badge className="bg-blue-50 text-blue-600 border-none text-[10px] font-bold px-2.5 py-1">ผู้ดูแล</Badge>;
+      case 'user': return <Badge className="bg-gray-100 text-gray-600 border-none text-[10px] font-bold px-2.5 py-1">ผู้ใช้ทั่วไป</Badge>;
+      case 'technician': return <Badge className="bg-green-50 text-green-600 border-none text-[10px] font-bold px-2.5 py-1">ช่าง</Badge>;
+      default: return <Badge className="border-none text-[10px] font-bold px-2.5 py-1 text-gray-400">ไม่ระบุ</Badge>;
     }
   };
 
-  const getStatusBadge = (status) => {
-    return status === 'active' 
-      ? <Badge className="bg-green-100 text-green-800">ใช้งานอยู่</Badge>
-      : <Badge className="bg-gray-200 text-gray-600">ระงับการใช้งาน</Badge>;
+  const getStatusBadge = (isActive) => {
+    return isActive === 1
+      ? <div className="inline-flex items-center gap-1.5 text-green-600 font-bold text-[10px] bg-green-50 px-2.5 py-1 rounded-lg"><div className="h-1 w-1 bg-green-500 rounded-full"></div> ใช้งานอยู่</div>
+      : <div className="inline-flex items-center gap-1.5 text-gray-400 font-bold text-[10px] bg-gray-50 px-2.5 py-1 rounded-lg"><div className="h-1 w-1 bg-gray-300 rounded-full"></div> ระงับใช้งาน</div>;
   };
 
   return (
-    <>
+    <div className="space-y-6 pb-6">
       <Helmet>
-        <title>จัดการผู้ใช้งาน - แดชบอร์ดแอดมิน</title>
+        <title>สมาชิกในระบบ | CheckChang Admin</title>
       </Helmet>
-      <motion.div
-        key="manage-users"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Card className="border-2 border-gray-900">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  จัดการผู้ใช้งาน
-                </CardTitle>
-                <CardDescription>
-                  จัดการบัญชีผู้ใช้และสิทธิ์การเข้าถึงระบบ
-                </CardDescription>
-              </div>
-              <UserForm 
-                onAddUser={addUser} 
-                editUser={editUser}
-                onEditUser={handleEditUser}
-                open={dialogOpen}
-                setOpen={setDialogOpen}
-              />
+
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">สมาชิกในระบบ</h1>
+          <p className="text-gray-500 mt-0.5 text-xs font-medium">จัดการบทบาท สิทธิ์การใช้งาน และตรวจสอบความเคลื่อนไหวของผู้ใช้</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+            <Download className="h-4 w-4 text-gray-500" />
+          </div>
+          <UserForm
+            onAddUser={addUser}
+            editUser={editUser}
+            onEditUser={handleEditUser}
+            open={dialogOpen}
+            setOpen={setDialogOpen}
+          />
+        </div>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <Card className="border-none bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] p-6 group">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
+              <h2 className="text-3xl font-black text-gray-900 mt-2 tracking-tighter">{stats.total}</h2>
             </div>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
-              <div className="flex-grow relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <div className="h-10 w-10 rounded-xl bg-gray-50 flex items-center justify-center group-hover:bg-[#FF6B35] group-hover:text-white transition-all">
+              <User className="h-5 w-5" />
+            </div>
+          </div>
+        </Card>
+        <Card className="border-none bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] p-6 group">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">กำลังใช้งาน</p>
+              <h2 className="text-3xl font-black text-green-600 mt-2 tracking-tighter">{stats.active}</h2>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-600 group-hover:text-white transition-all">
+              <UserCheck className="h-5 w-5" />
+            </div>
+          </div>
+        </Card>
+        <Card className="border-none bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] p-6 group">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">แอดมิน</p>
+              <h2 className="text-3xl font-black text-red-600 mt-2 tracking-tighter">{stats.admin}</h2>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 group-hover:bg-red-600 group-hover:text-white transition-all">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </div>
+        </Card>
+        <Card className="border-none stat-card-orange rounded-[1.5rem] p-6 shadow-xl group">
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">ผู้มาใหม่ (7 วัน)</p>
+              <h2 className="text-3xl font-black text-white mt-2 tracking-tighter">+{stats.newUsers}</h2>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Main Content Area */}
+      <Card className="border-none bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] overflow-hidden">
+        <CardHeader className="p-8 pb-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="text-lg font-bold text-gray-900 tracking-tight">รายชื่อสมาชิก</CardTitle>
+              <CardDescription className="text-[10px] text-gray-400 font-bold mt-0.5 uppercase tracking-wider">จัดการสิทธิ์และความปลอดภัย</CardDescription>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  type="text"
-                  placeholder="ค้นหาชื่อผู้ใช้, อีเมล, ชื่อ-นามสกุล..."
-                  className="pl-10 w-full border-gray-300"
+                  placeholder="ค้นหาชื่อ, อีเมล หรือชื่อสมาชิก..."
+                  className="pl-9 rounded-xl bg-gray-50 border-none py-4 text-xs h-10 focus-visible:ring-1 focus-visible:ring-gray-200"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px] border-gray-300">
-                    <SelectValue placeholder="บทบาท" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="moderator">Moderator</SelectItem>
-                    <SelectItem value="user">User</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[140px] border-gray-300">
-                    <SelectValue placeholder="สถานะ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button 
-                  variant="outline" 
-                  onClick={handleExport}
-                  className="w-full sm:w-auto"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">ส่งออก</span>
-                </Button>
-              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[100px] border-none bg-gray-50 rounded-lg text-[10px] font-bold h-10">
+                  <SelectValue placeholder="บทบาท" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทั้งหมด</SelectItem>
+                  <SelectItem value="admin">แอดมิน</SelectItem>
+                  <SelectItem value="moderator">ผู้ดูแล</SelectItem>
+                  <SelectItem value="user">สมาชิก</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-gray-900">{users.length}</div>
-                  <p className="text-xs text-gray-600">ผู้ใช้ทั้งหมด</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-green-600">
-                    {users.filter(u => u.status === 'active').length}
-                  </div>
-                  <p className="text-xs text-gray-600">ใช้งานอยู่</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-red-600">
-                    {users.filter(u => u.role === 'admin').length}
-                  </div>
-                  <p className="text-xs text-gray-600">ผู้ดูแลระบบ</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {users.filter(u => u.role === 'moderator').length}
-                  </div>
-                  <p className="text-xs text-gray-600">ผู้ดูแล</p>
-                </CardContent>
-              </Card>
+          </div>
+        </CardHeader>
+        <CardContent className="p-8">
+          {loading ? (
+            <div className="py-20 flex flex-col items-center justify-center">
+              <Loader2 className="h-10 w-10 text-[#FF6B35] animate-spin mb-4" />
+              <p className="text-sm text-gray-500 font-medium">กำลังโหลดข้อมูลสมาชิก...</p>
             </div>
-
-            {/* Table */}
-            <div className="border-2 border-gray-900 rounded-md">
+          ) : (
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="font-bold">ผู้ใช้</TableHead>
-                    <TableHead className="hidden md:table-cell font-bold">อีเมล</TableHead>
-                    <TableHead className="text-center font-bold">บทบาท</TableHead>
-                    <TableHead className="text-center font-bold">สถานะ</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center font-bold">เข้าสู่ระบบล่าสุด</TableHead>
-                    <TableHead className="text-right font-bold">จัดการ</TableHead>
+                  <TableRow className="border-none hover:bg-transparent">
+                    <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">ผู้ใช้งาน</TableHead>
+                    <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">การติดต่อ</TableHead>
+                    <TableHead className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">บทบาท</TableHead>
+                    <TableHead className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">สถานะ</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">เข้าสู่ระบบล่าสุด</TableHead>
+                    <TableHead className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">จัดการ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedUsers.length > 0 ? paginatedUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-gray-50">
-                      <TableCell>
+                    <TableRow key={user.id} className="border-b border-gray-50 hover:bg-gray-50/30 transition-colors group">
+                      <TableCell className="py-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white font-semibold">
-                            {user.firstName[0]}{user.lastName[0]}
+                          <div className="h-10 w-10 rounded-xl bg-gray-900 flex items-center justify-center text-white font-bold shadow-md group-hover:scale-105 transition-all cursor-default">
+                            {user.firstName[0].toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{user.username}</p>
-                            <p className="text-sm text-gray-600">{user.firstName} {user.lastName}</p>
+                            <p className="text-xs font-bold text-gray-900 leading-tight">{user.username}</p>
+                            <p className="text-[10px] font-medium text-gray-400 mt-0.5">{user.firstName} {user.lastName}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-gray-700">{user.email}</TableCell>
-                      <TableCell className="text-center">{getRoleBadge(user.role)}</TableCell>
-                      <TableCell className="text-center">{getStatusBadge(user.status)}</TableCell>
-                      <TableCell className="hidden lg:table-cell text-center text-sm text-gray-600">
-                        {user.lastLogin}
+                      <TableCell className="py-4">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                            <Mail className="h-3 w-3 text-gray-400" />
+                            {user.email}
+                          </div>
+                          <div className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">เข้าร่วม: {user.createdAt}</div>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>จัดการผู้ใช้</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setEditUser(user);
-                                setDialogOpen(true);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              แก้ไขข้อมูล
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleToggleStatus(user.id)}
-                              className="cursor-pointer"
-                            >
-                              <Lock className="mr-2 h-4 w-4" />
-                              {user.status === 'active' ? 'ระงับการใช้งาน' : 'เปิดใช้งาน'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-600 focus:text-red-600 cursor-pointer"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              ลบผู้ใช้
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell className="py-4 text-center">{getRoleBadge(user.role)}</TableCell>
+                      <TableCell className="py-4 text-center">{getStatusBadge(user.isActive)}</TableCell>
+                      <TableCell className="hidden lg:py-4 lg:table-cell lg:text-center">
+                        <div className="flex flex-col items-center">
+                          <p className="text-[10px] font-bold text-gray-600 leading-tight">{user.lastLogin?.split(' ')[0]}</p>
+                          <p className="text-[9px] text-gray-400 font-medium">{user.lastLogin?.split(' ')[1] || '-'}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-all"
+                            onClick={() => { setEditUser(user); setDialogOpen(true); }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-white border border-transparent hover:border-gray-100 transition-all">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border-gray-100 shadow-2xl">
+                              <DropdownMenuLabel className="text-[10px] font-bold text-gray-400 uppercase px-3 py-2">ความปลอดภัย</DropdownMenuLabel>
+                              <DropdownMenuItem className="rounded-lg py-2 cursor-pointer text-xs font-semibold" onClick={() => handleToggleStatus(user.id)}>
+                                <Lock className="mr-2 h-3.5 w-3.5" />
+                                {user.isActive === 1 ? 'ระงับการใช้งาน' : 'เปิดใช้งาน'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-gray-50" />
+                              <DropdownMenuItem className="rounded-lg py-2 cursor-pointer text-xs font-bold text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteUser(user.id)}>
+                                <Trash2 className="mr-2 h-3.5 w-3.5" /> ลบผู้ใช้ถาวร
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        ไม่พบผู้ใช้ที่ตรงกับการค้นหา
+                      <TableCell colSpan={6} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="h-16 w-16 rounded-full bg-gray-50 flex items-center justify-center">
+                            <AlertCircle className="h-8 w-8 text-gray-200" />
+                          </div>
+                          <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">ไม่พบสมาชิกที่ค้นหา</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
             </div>
+          )}
 
-            {/* Pagination */}
-            {filteredUsers.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-                <div className="text-sm text-gray-600">
-                  แสดง {((currentPage - 1) * itemsPerPage) + 1} ถึง {Math.min(currentPage * itemsPerPage, filteredUsers.length)} จากทั้งหมด {filteredUsers.length} รายการ
+          {/* Pagination */}
+          {filteredUsers.length > itemsPerPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                แสดง <span className="text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredUsers.length)}</span> จาก <span className="text-gray-900">{filteredUsers.length}</span>
+              </p>
+              <div className="flex items-center gap-1.5 font-bold">
+                <Button
+                  variant="ghost"
+                  className="rounded-lg h-9 w-9 p-0 border border-gray-100 hover:bg-gray-50"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.ceil(filteredUsers.length / itemsPerPage) }).map((_, i) => (
+                    <Button
+                      key={i}
+                      variant={currentPage === i + 1 ? 'default' : 'ghost'}
+                      className={`h-9 w-9 rounded-lg font-bold text-xs ${currentPage === i + 1 ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 border border-transparent'}`}
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline ml-1">ก่อนหน้า</span>
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={currentPage === pageNum ? "bg-gray-900 hover:bg-gray-800" : ""}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <span className="hidden sm:inline mr-1">ถัดไป</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  className="rounded-lg h-9 w-9 p-0 border border-gray-100 hover:bg-gray-50"
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredUsers.length / itemsPerPage), p + 1))}
+                  disabled={currentPage === Math.ceil(filteredUsers.length / itemsPerPage)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

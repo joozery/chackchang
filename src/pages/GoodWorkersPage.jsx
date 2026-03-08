@@ -28,7 +28,7 @@ export function GoodWorkersPage() {
           page: 1,
           limit: 50,
         });
-        
+
         if (response.success) {
           setTechnicians(response.data || []);
         } else {
@@ -61,7 +61,7 @@ export function GoodWorkersPage() {
         <title>ช่างรับงานดี - ตรวจสอบช่าง</title>
         <meta name="description" content="ค้นหาช่างที่มีประวัติการทำงานดี มีรีวิวและคะแนนสูง" />
       </Helmet>
-      
+
       <div className="flex flex-col min-h-screen bg-white">
         <main className="flex-grow">
           {/* Hero Section */}
@@ -111,7 +111,7 @@ export function GoodWorkersPage() {
                 <div className="relative group">
                   {/* Glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-gray-300/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300 opacity-50"></div>
-                  
+
                   <div className="relative bg-white rounded-xl shadow-2xl p-1.5 flex items-center">
                     <div className="flex-shrink-0 pl-3">
                       <Search className="h-5 w-5 text-gray-400" />
@@ -124,7 +124,7 @@ export function GoodWorkersPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       onKeyPress={handleKeyPress}
                     />
-                    <Button 
+                    <Button
                       onClick={handleSearch}
                       className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white h-10 px-6 rounded-lg text-sm font-semibold shadow-lg hover:shadow-xl mr-1 transition-all duration-300"
                     >
@@ -148,7 +148,7 @@ export function GoodWorkersPage() {
                 <div className="text-center py-20">
                   <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
                   <p className="text-gray-600">{error}</p>
-                  <Button 
+                  <Button
                     onClick={() => window.location.reload()}
                     className="mt-4 bg-green-500 hover:bg-green-600 text-white"
                   >
@@ -170,8 +170,10 @@ export function GoodWorkersPage() {
                             {/* Profile Image */}
                             <div className="relative flex-shrink-0">
                               {technician.profileImage && typeof technician.profileImage === 'string' && technician.profileImage.trim() ? (
-                                <img 
-                                  src={technician.profileImage.startsWith('/') ? technician.profileImage : `/api${technician.profileImage}`}
+                                <img
+                                  src={technician.profileImage?.startsWith('http')
+                                    ? technician.profileImage
+                                    : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001'}${technician.profileImage}`}
                                   alt={technician.fullName}
                                   className="w-16 h-16 rounded-full object-cover border-2 border-green-500/30"
                                 />
@@ -180,13 +182,13 @@ export function GoodWorkersPage() {
                                   {technician.fullName?.charAt(0).toUpperCase() || technician.username?.charAt(0).toUpperCase()}
                                 </div>
                               )}
-                              {technician.isVerified && (
+                              {!!technician.isVerified && (
                                 <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1 border-2 border-white">
                                   <ShieldCheck className="h-4 w-4 text-white" />
                                 </div>
                               )}
                             </div>
-                            
+
                             {/* Name and Info */}
                             <div className="flex-1 min-w-0">
                               <CardTitle className="text-lg font-bold text-gray-900 mb-1 truncate">
@@ -195,8 +197,8 @@ export function GoodWorkersPage() {
                               <div className="flex items-center gap-2 mb-2">
                                 <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                                 <span className="text-sm font-semibold text-gray-700">
-                                  {technician.rating != null && !isNaN(technician.rating) 
-                                    ? Number(technician.rating).toFixed(1) 
+                                  {technician.rating != null && !isNaN(technician.rating)
+                                    ? (Number(technician.rating) || 0).toFixed(1)
                                     : '0.0'}
                                 </span>
                                 <span className="text-xs text-gray-500">
@@ -209,19 +211,25 @@ export function GoodWorkersPage() {
                                   <span>งานที่ทำ: {technician.totalJobs}</span>
                                 </div>
                               )}
+                              {technician.province && (
+                                <div className="flex items-center gap-1 mt-1 text-xs text-blue-600 font-medium">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{technician.province}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </CardHeader>
-                        
+
                         <CardContent className="flex-grow flex flex-col">
                           {/* Work Types */}
                           {technician.workTypes && technician.workTypes.length > 0 && (
                             <div className="mb-4">
                               <div className="flex flex-wrap gap-2">
                                 {technician.workTypes.slice(0, 3).map((workType, idx) => (
-                                  <Badge 
+                                  <Badge
                                     key={idx}
-                                    variant="outline" 
+                                    variant="outline"
                                     className="bg-green-50 text-green-700 border-green-300 text-xs"
                                   >
                                     {workType}
@@ -253,9 +261,9 @@ export function GoodWorkersPage() {
                             {technician.facebookLink && (
                               <div className="flex items-center gap-2 text-sm">
                                 <Link2 className="h-4 w-4 text-green-600" />
-                                <a 
-                                  href={technician.facebookLink} 
-                                  target="_blank" 
+                                <a
+                                  href={technician.facebookLink}
+                                  target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-blue-600 hover:underline truncate"
                                 >
@@ -270,8 +278,7 @@ export function GoodWorkersPage() {
                             variant="outline"
                             className="w-full border-green-500 text-green-600 hover:bg-green-50"
                             onClick={() => {
-                              // TODO: Navigate to technician detail page
-                              console.log('View technician:', technician.id);
+                              navigate(`/good-workers/${technician.id}`);
                             }}
                           >
                             ดูโปรไฟล์
@@ -299,7 +306,7 @@ export function GoodWorkersPage() {
                     {searchQuery ? 'ไม่พบช่างที่ค้นหา' : 'ยังไม่มีช่างในระบบ'}
                   </h2>
                   <p className="text-gray-300 max-w-md mx-auto mb-6">
-                    {searchQuery 
+                    {searchQuery
                       ? 'ลองค้นหาด้วยคำอื่น หรือลบคำค้นหาเพื่อดูช่างทั้งหมด'
                       : 'เป็นช่างคนแรกที่สมัครสมาชิกในระบบช่างรับงานดี'
                     }

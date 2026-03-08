@@ -6,8 +6,11 @@ import dotenv from 'dotenv';
 import { testConnection } from './config/database.js';
 import blacklistRoutes from './routes/blacklistRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import technicianRoutes from './routes/technicianRoutes.js';
+import settingRoutes from './routes/settingRoutes.js';
 
 dotenv.config();
 
@@ -22,11 +25,25 @@ app.use(helmet({
 app.use(compression());
 
 // CORS configuration
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
+
+console.log('🔒 CORS Allowed Origins:', allowedOrigins);
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN 
-    ? process.env.CORS_ORIGIN.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173'],
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS blocked for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 
@@ -40,13 +57,16 @@ app.use('/api/uploads', express.static('uploads'));
 // Routes
 app.use('/api/blacklist', blacklistRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admins', adminRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/technicians', technicianRoutes);
+app.use('/api/settings', settingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'API is running',
     timestamp: new Date().toISOString(),
   });
@@ -54,7 +74,7 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint
 app.get('/api', (req, res) => {
-  res.json({ 
+  res.json({
     success: true,
     message: 'Chackchang API',
     version: '1.0.0',
@@ -80,7 +100,8 @@ app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal server error',
+    message: err.message || 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์',
+    error: err.message // Temporary for debugging
   });
 });
 

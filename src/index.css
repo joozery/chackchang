@@ -106,3 +106,23 @@ body::-webkit-scrollbar {
 .gradient-text {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-700 via-gray-900 to-black;
 }
+
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
+
+.glass-dark {
+  @apply bg-gray-900/80 backdrop-blur-md border border-gray-800/50 shadow-2xl;
+}
+
+.glass-hover {
+  @apply transition-all duration-300 hover:bg-white/80 hover:shadow-2xl hover:-translate-y-1;
+}
+
+.stat-card-orange {
+  @apply bg-gradient-to-br from-[#FF6B35] to-[#E85D2A] text-white shadow-lg shadow-orange-200;
+}
+
+.badge-dot {
+  @apply h-2 w-2 rounded-full mr-2;
+}

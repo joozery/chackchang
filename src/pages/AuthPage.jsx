@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from '@/lib/hooks/use-auth';
 import { Lock, User, Shield, FileText, Mail, Phone, Calendar, Image, Link2, MessageCircle, Upload, X } from 'lucide-react';
 import logo from '@/assest/logo.jpg';
+import settingService from '@/services/settingService';
 
 const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
   const [username, setUsername] = useState('');
@@ -31,7 +32,7 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [registerAsTechnician, setRegisterAsTechnician] = useState(isTechnician);
-  
+
   // Technician specific fields
   const [profileImage, setProfileImage] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
@@ -40,18 +41,21 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
   const [facebookLink, setFacebookLink] = useState('');
 
   // Work types options
-  const workTypes = [
-    'ซ่อมบ้าน',
-    'ทาสี',
-    'ติดตั้งแอร์',
-    'งานไฟฟ้า',
-    'งานประปา',
-    'ปูกระเบื้อง',
-    'ทำหลังคา',
-    'ตกแต่งภายใน',
-    'ทำรั้ว',
-    'อื่นๆ'
-  ];
+  const [workTypes, setWorkTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchWorkTypes = async () => {
+      try {
+        const data = await settingService.get('work_types');
+        if (data) {
+          setWorkTypes(data);
+        }
+      } catch (error) {
+        console.error('Error fetching work types:', error);
+      }
+    };
+    fetchWorkTypes();
+  }, []);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -84,43 +88,51 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
     });
   }, []);
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isLogin && !acceptTerms) {
       alert('กรุณายอมรับเงื่อนไขการใช้งาน');
       return;
     }
-    
-    if (isLogin) {
-      onSubmit(username, password);
-    } else {
-      const formData = {
-        firstName,
-        lastName,
-        email,
-        phone,
-        birthDate,
-        isTechnician: registerAsTechnician
-      };
 
-      if (registerAsTechnician) {
-        // Validate technician fields
-        if (!profileImage) {
-          alert('กรุณาอัปโหลดรูปภาพโปรไฟล์');
-          return;
+    setLoading(true);
+    try {
+      if (isLogin) {
+        await onSubmit(username, password);
+      } else {
+        const formData = {
+          firstName,
+          lastName,
+          email,
+          phone,
+          birthDate,
+          isTechnician: registerAsTechnician
+        };
+
+        if (registerAsTechnician) {
+          if (!profileImage) {
+            alert('กรุณาอัปโหลดรูปภาพโปรไฟล์');
+            return;
+          }
+          if (selectedWorkTypes.length === 0) {
+            alert('กรุณาเลือกประเภทงานอย่างน้อย 1 ประเภท');
+            return;
+          }
+
+          formData.profileImage = profileImage;
+          formData.workTypes = selectedWorkTypes;
+          formData.lineId = lineId;
+          formData.facebookLink = facebookLink;
         }
-        if (selectedWorkTypes.length === 0) {
-          alert('กรุณาเลือกประเภทงานอย่างน้อย 1 ประเภท');
-          return;
-        }
-        
-        formData.profileImage = profileImage;
-        formData.workTypes = selectedWorkTypes;
-        formData.lineId = lineId;
-        formData.facebookLink = facebookLink;
+
+        await onSubmit(username, password, formData);
       }
-
-      onSubmit(username, password, formData);
+    } catch (error) {
+      console.error('Auth error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -129,16 +141,16 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
       <CardContent className="space-y-5 pt-6">
         <div className="space-y-2">
           <Label htmlFor="username" className="text-sm font-medium text-gray-700">
-            ชื่อผู้ใช้
+            อีเมล
           </Label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input 
-              id="username" 
-              type="text" 
-              placeholder="กรอกชื่อผู้ใช้" 
-              required 
-              value={username} 
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              id="username"
+              type="text"
+              placeholder="กรอกอีเมลของคุณ"
+              required
+              value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
             />
@@ -150,12 +162,12 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
           </Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input 
-              id="password" 
-              type="password" 
+            <Input
+              id="password"
+              type="password"
               placeholder="กรอกรหัสผ่าน"
-              required 
-              value={password} 
+              required
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
             />
@@ -171,12 +183,12 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input 
-                    id="firstName" 
-                    type="text" 
-                    placeholder="กรอกชื่อจริง" 
-                    required 
-                    value={firstName} 
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="กรอกชื่อจริง"
+                    required
+                    value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                   />
@@ -189,12 +201,12 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input 
-                    id="lastName" 
-                    type="text" 
-                    placeholder="กรอกนามสกุล" 
-                    required 
-                    value={lastName} 
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="กรอกนามสกุล"
+                    required
+                    value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                   />
@@ -208,12 +220,12 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="example@email.com" 
-                  required 
-                  value={email} 
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  required
+                  value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                 />
@@ -226,12 +238,12 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
               </Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input 
-                  id="phone" 
-                  type="tel" 
-                  placeholder="0xx-xxx-xxxx" 
-                  required 
-                  value={phone} 
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="0xx-xxx-xxxx"
+                  required
+                  value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                 />
@@ -244,11 +256,11 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
               </Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input 
-                  id="birthDate" 
-                  type="date" 
-                  required 
-                  value={birthDate} 
+                <Input
+                  id="birthDate"
+                  type="date"
+                  required
+                  value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
                   className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                 />
@@ -258,16 +270,16 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
             {/* Technician Registration Option */}
             <div className="space-y-2">
               <div className="flex items-start space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <Checkbox 
-                  id="technician" 
+                <Checkbox
+                  id="technician"
                   checked={registerAsTechnician}
                   onCheckedChange={(checked) => {
                     setRegisterAsTechnician(checked === true);
                   }}
                   className="mt-1"
                 />
-                <label 
-                  htmlFor="technician" 
+                <label
+                  htmlFor="technician"
                   className="text-sm text-gray-700 leading-relaxed cursor-pointer flex-1"
                 >
                   <span className="font-semibold text-green-700">สมัครเป็นช่าง</span>
@@ -289,9 +301,9 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
                   <div className="space-y-3">
                     {profileImagePreview ? (
                       <div className="relative inline-block">
-                        <img 
-                          src={profileImagePreview} 
-                          alt="Preview" 
+                        <img
+                          src={profileImagePreview}
+                          alt="Preview"
                           className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
                         />
                         <button
@@ -338,18 +350,17 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
                       return (
                         <div
                           key={workType}
-                          className={`flex items-center space-x-2 p-3 border-2 rounded-lg transition-all ${
-                            isSelected
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
+                          className={`flex items-center space-x-2 p-3 border-2 rounded-lg transition-all ${isSelected
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
                         >
                           <Checkbox
                             id={`worktype-${workType}`}
                             checked={isSelected}
                             onCheckedChange={() => toggleWorkType(workType)}
                           />
-                          <label 
+                          <label
                             htmlFor={`worktype-${workType}`}
                             className="text-sm text-gray-700 cursor-pointer flex-1"
                           >
@@ -368,11 +379,11 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
                   </Label>
                   <div className="relative">
                     <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input 
-                      id="lineId" 
-                      type="text" 
-                      placeholder="กรอก Line ID (ถ้ามี)" 
-                      value={lineId} 
+                    <Input
+                      id="lineId"
+                      type="text"
+                      placeholder="กรอก Line ID (ถ้ามี)"
+                      value={lineId}
                       onChange={(e) => setLineId(e.target.value)}
                       className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                     />
@@ -386,11 +397,11 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
                   </Label>
                   <div className="relative">
                     <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input 
-                      id="facebookLink" 
-                      type="url" 
-                      placeholder="https://www.facebook.com/..." 
-                      value={facebookLink} 
+                    <Input
+                      id="facebookLink"
+                      type="url"
+                      placeholder="https://www.facebook.com/..."
+                      value={facebookLink}
                       onChange={(e) => setFacebookLink(e.target.value)}
                       className="pl-10 h-11 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
                     />
@@ -401,14 +412,14 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
 
             <div className="space-y-3">
               <div className="flex items-start space-x-2">
-                <Checkbox 
-                  id="terms" 
+                <Checkbox
+                  id="terms"
                   checked={acceptTerms}
                   onCheckedChange={setAcceptTerms}
                   className="mt-1"
                 />
-                <label 
-                  htmlFor="terms" 
+                <label
+                  htmlFor="terms"
                   className="text-sm text-gray-700 leading-relaxed cursor-pointer"
                 >
                   ฉันได้อ่านและยอมรับ{' '}
@@ -427,8 +438,8 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
         )}
       </CardContent>
       <CardFooter className="pt-2">
-        <Button 
-          className="w-full h-11 bg-black hover:bg-gray-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed" 
+        <Button
+          className="w-full h-11 bg-black hover:bg-gray-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"
           disabled={!isLogin && !acceptTerms}
         >
@@ -445,7 +456,7 @@ const AuthForm = ({ isLogin, onSubmit, isTechnician = false }) => {
               ข้อกำหนดและเงื่อนไขการใช้งาน
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6 text-sm text-gray-700 leading-relaxed">
             <section>
               <p className="mb-4">
@@ -590,7 +601,7 @@ export function AuthPage() {
         <title>เข้าสู่ระบบ - รู้ทันช่าง</title>
         <meta name="description" content="เข้าสู่ระบบหรือสมัครสมาชิกเพื่อใช้งานระบบตรวจสอบช่างมืออาชีพ" />
       </Helmet>
-      
+
       {/* Background with gradient */}
       <div className="min-h-full relative flex items-center justify-center p-4 pt-32 bg-gradient-to-br from-white via-gray-50 to-gray-100">
         {/* Decorative background elements */}
@@ -608,7 +619,7 @@ export function AuthPage() {
           className="w-full max-w-lg relative z-10"
         >
           {/* Logo and Title */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -616,9 +627,9 @@ export function AuthPage() {
           >
             <div className="relative mb-4">
               <div className="absolute inset-0 bg-gradient-to-r from-gray-600 to-gray-900 rounded-2xl blur-lg opacity-30"></div>
-              <img 
-                src={logo} 
-                alt="รู้ทันช่าง Logo" 
+              <img
+                src={logo}
+                alt="รู้ทันช่าง Logo"
                 className="h-20 w-20 object-contain rounded-2xl shadow-2xl relative z-10 ring-4 ring-white"
               />
             </div>
@@ -635,20 +646,20 @@ export function AuthPage() {
           >
             <Tabs value={defaultTab} onValueChange={setDefaultTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4 bg-white shadow-md p-1 h-12">
-                <TabsTrigger 
+                <TabsTrigger
                   value="login"
                   className="data-[state=active]:bg-black data-[state=active]:text-white font-medium transition-all duration-300"
                 >
                   เข้าสู่ระบบ
                 </TabsTrigger>
-                <TabsTrigger 
+                <TabsTrigger
                   value="register"
                   className="data-[state=active]:bg-black data-[state=active]:text-white font-medium transition-all duration-300"
                 >
                   สมัครสมาชิก
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login">
                 <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/90">
                   <CardHeader className="space-y-1 pb-4">
@@ -660,7 +671,7 @@ export function AuthPage() {
                   <AuthForm isLogin={true} onSubmit={login} />
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="register">
                 <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/90 max-h-[90vh] overflow-y-auto">
                   <CardHeader className="space-y-1 pb-4 sticky top-0 bg-white/90 backdrop-blur-sm z-10 border-b border-gray-200">

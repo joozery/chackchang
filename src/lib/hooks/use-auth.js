@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -13,53 +14,66 @@ export const AuthProvider = ({ children }) => {
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
+    setLoading(false);
   }, []);
 
-  const login = (username, password) => {
-    // Check for redirect path
-    const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-    
-    // Admin check
-    if (username.toLowerCase() === 'admin') {
-      const adminUser = { username: 'admin', role: 'admin' };
-      localStorage.setItem('black-list-user', JSON.stringify(adminUser));
-      setUser(adminUser);
-      toast({
-        title: "🎉 ยินดีต้อนรับ Admin!",
-        description: `เข้าสู่ระบบแผงควบคุมสำเร็จ`,
+  const login = async (username, password) => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
       });
-      
-      // Clear redirect path
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store Token
+        const token = data.data.token;
+        localStorage.setItem('token', token);
+
+        // Store User Data
+        const userData = data.data.user;
+        localStorage.setItem('black-list-user', JSON.stringify(userData));
+        setUser(userData);
+
+        toast({
+          title: "🎉 เข้าสู่ระบบสำเร็จ!",
+          description: `ยินดีต้อนรับคุณ ${userData.firstName || userData.username}`,
+        });
+
+        // Redirect based on role and saved path
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+        } else if (userData.role === 'admin' || userData.role === 'moderator') {
+          navigate('/dashboard/overview');
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/dashboard/blacklist');
+        throw new Error(data.message || 'Login failed');
       }
-    } else {
-      const mockUser = { username, email: `${username}@example.com`, role: 'user' };
-      localStorage.setItem('black-list-user', JSON.stringify(mockUser));
-      setUser(mockUser);
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
-        title: "🎉 ยินดีต้อนรับ!",
-        description: `เข้าสู่ระบบสำเร็จในชื่อ ${username}`,
+        title: "❌ เข้าสู่ระบบไม่สำเร็จ",
+        description: error.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+        variant: "destructive"
       });
-      
-      // Clear redirect path and navigate
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate('/'); 
-      }
+      throw error;
     }
   };
 
   const register = async (username, password, additionalData = {}) => {
     try {
-    // Check for redirect path
-    const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-    
+      // Check for redirect path
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+
       // Prepare registration data
       const registerData = {
         username,
@@ -80,7 +94,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
         const formData = new FormData();
-        
+
         // Add all fields to FormData
         Object.keys(registerData).forEach(key => {
           if (key === 'workTypes') {
@@ -99,12 +113,12 @@ export const AuthProvider = ({ children }) => {
 
         if (response.ok) {
           const data = await response.json();
-          
+
           // Store token
           if (data.data?.token) {
             localStorage.setItem('token', data.data.token);
           }
-          
+
           // Store user data
           const userData = {
             ...data.data.user,
@@ -121,18 +135,18 @@ export const AuthProvider = ({ children }) => {
           console.log('Storing user data from API:', userData);
           localStorage.setItem('black-list-user', JSON.stringify(userData));
           setUser(userData);
-          
-    toast({
-        title: "✅ สมัครสมาชิกสำเร็จ!",
-        description: `ยินดีต้อนรับ ${username}!`,
-    });
-    
-    // Clear redirect path and navigate
-    if (redirectPath) {
-      sessionStorage.removeItem('redirectAfterLogin');
-      navigate(redirectPath);
-    } else {
-      navigate('/');
+
+          toast({
+            title: "✅ สมัครสมาชิกสำเร็จ!",
+            description: `ยินดีต้อนรับ ${username}!`,
+          });
+
+          // Clear redirect path and navigate
+          if (redirectPath) {
+            sessionStorage.removeItem('redirectAfterLogin');
+            navigate(redirectPath);
+          } else {
+            navigate('/');
           }
           return;
         } else {
@@ -143,9 +157,9 @@ export const AuthProvider = ({ children }) => {
         console.error('API registration failed, using fallback:', apiError);
         // Fallback to mock registration
         const role = additionalData.isTechnician ? 'technician' : 'user';
-        const mockUser = { 
-          username, 
-          email: registerData.email, 
+        const mockUser = {
+          username,
+          email: registerData.email,
           role: role,
           firstName: registerData.firstName,
           lastName: registerData.lastName,
@@ -163,7 +177,7 @@ export const AuthProvider = ({ children }) => {
           title: "✅ สมัครสมาชิกสำเร็จ!",
           description: `ยินดีต้อนรับ ${username}!`,
         });
-        
+
         if (redirectPath) {
           sessionStorage.removeItem('redirectAfterLogin');
           navigate(redirectPath);
@@ -191,7 +205,7 @@ export const AuthProvider = ({ children }) => {
     navigate('/');
   };
 
-  const value = { user, login, register, logout };
+  const value = { user, loading, login, register, logout };
 
   return React.createElement(AuthContext.Provider, { value: value }, children);
 };

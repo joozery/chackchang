@@ -1,52 +1,36 @@
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
+import dotenv from 'dotenv';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'profile-' + uniqueSuffix + ext);
-  }
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// File filter
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น (JPEG, JPG, PNG, GIF, WEBP)'));
-  }
-};
+// Configure Storage
+export const cloudinaryStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'chackchang/profiles',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
+    transformation: [{ width: 500, height: 500, crop: 'limit' }],
+  },
+});
 
 // Multer configuration
 export const upload = multer({
-  storage: storage,
+  storage: cloudinaryStorage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  },
-  fileFilter: fileFilter
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
 });
 
-// Upload profile image
+// Upload profile image handler
 export const uploadProfileImage = async (req, res) => {
   try {
     if (!req.file) {
@@ -56,24 +40,21 @@ export const uploadProfileImage = async (req, res) => {
       });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-
+    // Cloudinary returns the file URL in req.file.path
     res.json({
       success: true,
       message: 'อัปโหลดรูปภาพสำเร็จ',
       data: {
-        imageUrl,
+        imageUrl: req.file.path, // Full Cloudinary URL
         filename: req.file.filename,
         size: req.file.size
       }
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Cloudinary upload error:', error);
     res.status(500).json({
       success: false,
-      message: 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ'
+      message: 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพไปยัง Cloudinary'
     });
   }
 };
-
-

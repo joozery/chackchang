@@ -32,16 +32,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { 
-  PlusCircle, 
-  Search, 
-  CheckCircle, 
-  XCircle, 
-  Edit, 
-  Trash2, 
+import {
+  PlusCircle,
+  Search,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Trash2,
   MoreVertical,
   Download,
-  FileSpreadsheet,
+  Calendar,
+  Filter,
+  ArrowUpRight,
+  TrendingUp,
+  AlertCircle,
+  Clock,
+  User,
+  ShieldCheck,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -54,13 +61,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 
-const initialBlacklist = [
-  { id: 1, name: 'สมชาย ทิ้งงาน', offense: 'รับเงินมัดจำแล้วหาย', reportedBy: 'สมหญิง', date: '2025-10-28', status: 'approved' },
-  { id: 2, name: 'ประวิทย์ ไม่มา', offense: 'งานไม่เรียบร้อย ของไม่ตรงสเปค', reportedBy: 'สมศักดิ์', date: '2025-10-20', status: 'pending' },
-  { id: 3, name: 'มานะ โกงเงิน', offense: 'เบิกเงินเกินจริง', reportedBy: 'สมศรี', date: '2025-09-15', status: 'rejected' },
-  { id: 4, name: 'ชาติชาย วัสดุปลอม', offense: 'ใช้วัสดุปลอม', reportedBy: 'สมปอง', date: '2025-11-01', status: 'pending' },
-  { id: 5, name: 'ใจดี ไม่รับผิดชอบ', offense: 'ทำงานเสียหายแล้วไม่รับผิดชอบ', reportedBy: 'สมหวัง', date: '2025-11-04', status: 'pending' },
+const chartData = [
+  { name: 'ม.ค.', reports: 40, approved: 24 },
+  { name: 'ก.พ.', reports: 30, approved: 13 },
+  { name: 'มี.ค.', reports: 20, approved: 98 },
+  { name: 'เม.ย.', reports: 27, approved: 39 },
+  { name: 'พ.ค.', reports: 18, approved: 48 },
+  { name: 'มิ.ย.', reports: 23, approved: 38 },
+  { name: 'ก.ค.', reports: 34, approved: 43 },
+  { name: 'ส.ค.', reports: 45, approved: 20 },
 ];
 
 const ReportForm = ({ onAddEntry, editEntry, onEditEntry, open, setOpen }) => {
@@ -68,8 +89,7 @@ const ReportForm = ({ onAddEntry, editEntry, onEditEntry, open, setOpen }) => {
   const [offense, setOffense] = useState('');
   const { user } = useAuth();
 
-  // Update form when editEntry changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (editEntry) {
       setName(editEntry.name);
       setOffense(editEntry.offense);
@@ -84,7 +104,7 @@ const ReportForm = ({ onAddEntry, editEntry, onEditEntry, open, setOpen }) => {
     if (!name || !offense) {
       toast({
         title: "ข้อมูลไม่ครบถ้วน",
-        description: "กรุณากรอกชื่อและรายละเอียดการกระทำผิด",
+        description: "กรุณากรอกข้อมูลให้ครบทุกช่อง",
         variant: "destructive",
       });
       return;
@@ -92,62 +112,55 @@ const ReportForm = ({ onAddEntry, editEntry, onEditEntry, open, setOpen }) => {
 
     if (editEntry) {
       onEditEntry(editEntry.id, { name, offense });
-      toast({
-        title: "✅ แก้ไขข้อมูลสำเร็จ",
-        description: `แก้ไขข้อมูล ${name} เรียบร้อยแล้ว`,
-      });
+      toast({ title: "อัปเดตข้อมูลสำเร็จ" });
     } else {
       const newEntry = {
         id: Date.now(),
         name,
         offense,
-        reportedBy: user?.username || 'ไม่ระบุ',
+        reportedBy: user?.username || 'System',
         date: new Date().toISOString().split('T')[0],
         status: 'pending',
       };
       onAddEntry(newEntry);
-      toast({
-        title: "✅ แจ้งข้อมูลสำเร็จ",
-        description: `ขอบคุณที่แจ้งข้อมูล ${name} เรื่องจะถูกตรวจสอบโดยเร็วที่สุด`,
-      });
+      toast({ title: "ส่งรายงานสำเร็จ" });
     }
-
-    setName('');
-    setOffense('');
     setOpen(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gray-900 hover:bg-gray-800">
-          <PlusCircle className="mr-2 h-4 w-4" /> เพิ่มข้อมูลใหม่
+        <Button className="bg-[#FF6B35] hover:bg-[#E85D2A] text-white rounded-xl px-5 h-11 shadow-lg shadow-orange-100 transition-all hover:-translate-y-0.5">
+          <PlusCircle className="mr-2 h-4 w-4" /> เพิ่มรายงานใหม่
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="sm:max-w-[450px] rounded-2xl border-none shadow-2xl overflow-hidden p-0">
+        <div className="bg-gray-900 p-6 text-white text-center">
           <DialogHeader>
-            <DialogTitle>{editEntry ? 'แก้ไขข้อมูลรายงาน' : 'เพิ่มข้อมูลช่างในบัญชีดำ'}</DialogTitle>
-            <DialogDescription>
-              {editEntry ? 'แก้ไขรายละเอียดรายงาน' : 'กรอกรายละเอียดเพื่อเพิ่มข้อมูลใหม่เข้าระบบ'}
+            <DialogTitle className="text-xl font-bold">{editEntry ? 'แก้ไขรายงาน' : 'เพิ่มรายชื่อบัญชีดำ'}</DialogTitle>
+            <DialogDescription className="text-gray-400 mt-1 text-xs">
+              กรอกรายละเอียดพฤติกรรมของช่างเพื่อรักษาความปลอดภัยของชุมชน
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">ชื่อช่าง</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" placeholder="ชื่อ-นามสกุล หรือชื่อเล่น" />
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-xs font-bold text-gray-700">ชื่อ-นามสกุล ช่าง</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="ชื่อจริง หรือนามแฝง" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="offense" className="text-right">รายละเอียด</Label>
-              <Input id="offense" value={offense} onChange={(e) => setOffense(e.target.value)} className="col-span-3" placeholder="เช่น ทิ้งงาน, โกงเงิน" />
+            <div className="space-y-1.5">
+              <Label htmlFor="offense" className="text-xs font-bold text-gray-700">รายละเอียดพฤติกรรม</Label>
+              <Input id="offense" value={offense} onChange={(e) => setOffense(e.target.value)} className="rounded-lg bg-gray-50 border-none py-5 focus-visible:ring-[#FF6B35] text-sm" placeholder="เช่น รับเงินมัดจำแล้วหาย, ทิ้งงาน" />
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="ghost" className="rounded-lg px-6 h-10 text-xs font-bold" onClick={() => setOpen(false)}>
               ยกเลิก
             </Button>
-            <Button type="submit" className="bg-gray-900 hover:bg-gray-800">
-              {editEntry ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล'}
+            <Button type="submit" className="bg-[#FF6B35] hover:bg-[#E85D2A] text-white rounded-lg px-8 h-10 shadow-lg shadow-orange-100 text-xs font-bold">
+              {editEntry ? 'บันทึกการแก้ไข' : 'ยืนยันและบันทึก'}
             </Button>
           </DialogFooter>
         </form>
@@ -156,396 +169,299 @@ const ReportForm = ({ onAddEntry, editEntry, onEditEntry, open, setOpen }) => {
   );
 };
 
-
 const ManageBlacklistPage = () => {
-    const [blacklist, setBlacklist] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [editEntry, setEditEntry] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [loading, setLoading] = useState(true);
-    const itemsPerPage = 10;
+  const { user } = useAuth();
+  const [blacklist, setBlacklist] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const itemsPerPage = 8;
 
-    // Fetch blacklist from API
-    useEffect(() => {
-        const fetchBlacklist = async () => {
-            try {
-                setLoading(true);
-                const data = await blacklistService.getAll({ status: statusFilter, search: searchTerm });
-                setBlacklist(data);
-            } catch (error) {
-                console.error('Error fetching blacklist:', error);
-                toast({
-                    title: "❌ เกิดข้อผิดพลาด",
-                    description: "ไม่สามารถโหลดข้อมูลได้",
-                    variant: "destructive",
-                });
-                // Fallback to initial data
-                setBlacklist(initialBlacklist);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBlacklist();
-    }, []);
-
-    const addEntry = async (newEntry) => {
-        try {
-            const result = await blacklistService.create(newEntry);
-            // Refresh the list
-            const data = await blacklistService.getAll({ status: statusFilter });
-            setBlacklist(data);
-        } catch (error) {
-            console.error('Error adding entry:', error);
-            toast({
-                title: "❌ เกิดข้อผิดพลาด",
-                description: "ไม่สามารถเพิ่มข้อมูลได้",
-                variant: "destructive",
-            });
-        }
+  useEffect(() => {
+    const fetchBlacklist = async () => {
+      try {
+        setLoading(true);
+        const data = await blacklistService.getAll({ status: statusFilter, search: searchTerm });
+        setBlacklist(data);
+      } catch (error) {
+        console.error('Error:', error);
+        setBlacklist([]);
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    const handleEditEntry = async (id, updatedData) => {
-        try {
-            await blacklistService.update(id, updatedData);
-            // Update local state
-            setBlacklist(blacklist.map(entry => 
-                entry.id === id ? { ...entry, ...updatedData } : entry
-            ));
-            setEditEntry(null);
-        } catch (error) {
-            console.error('Error updating entry:', error);
-            toast({
-                title: "❌ เกิดข้อผิดพลาด",
-                description: "ไม่สามารถแก้ไขข้อมูลได้",
-                variant: "destructive",
-            });
-        }
-    };
+    fetchBlacklist();
+  }, [statusFilter, searchTerm]);
 
-    const handleDeleteEntry = async (id) => {
-        if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบรายงานนี้?')) {
-            try {
-                await blacklistService.delete(id);
-                setBlacklist(blacklist.filter(entry => entry.id !== id));
-                toast({
-                    title: "✅ ลบรายงานสำเร็จ",
-                    description: "ลบรายงานออกจากระบบแล้ว",
-                });
-            } catch (error) {
-                console.error('Error deleting entry:', error);
-                toast({
-                    title: "❌ เกิดข้อผิดพลาด",
-                    description: "ไม่สามารถลบข้อมูลได้",
-                    variant: "destructive",
-                });
-            }
-        }
-    };
-    
-    const handleStatusChange = async (id, newStatus) => {
-        try {
-            await blacklistService.updateStatus(id, newStatus);
-            setBlacklist(blacklist.map(entry => entry.id === id ? { ...entry, status: newStatus } : entry));
-            toast({
-                title: `✅ อัปเดตสถานะสำเร็จ`,
-                description: `คำร้อง #${id.toString().slice(-4)} ถูกเปลี่ยนเป็น ${newStatus}`,
-            });
-        } catch (error) {
-            console.error('Error updating status:', error);
-            toast({
-                title: "❌ เกิดข้อผิดพลาด",
-                description: "ไม่สามารถอัปเดตสถานะได้",
-                variant: "destructive",
-            });
-        }
-    };
-    
-    const filteredBlacklist = useMemo(() =>
-        blacklist.filter(entry => {
-        const matchesSearch = entry.name.toLowerCase().includes(searchTerm.toLowerCase()) || entry.offense.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = statusFilter === 'all' || entry.status === statusFilter;
-        return matchesSearch && matchesFilter;
-        }), [blacklist, searchTerm, statusFilter]
-    );
+  const addEntry = async (newEntry) => {
+    try {
+      await blacklistService.create(newEntry);
+      const data = await blacklistService.getAll({ status: statusFilter });
+      setBlacklist(data);
+    } catch (error) { console.error(error); }
+  };
 
-    // Pagination logic
-    const totalPages = Math.ceil(filteredBlacklist.length / itemsPerPage);
-    const paginatedBlacklist = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        return filteredBlacklist.slice(startIndex, startIndex + itemsPerPage);
-    }, [filteredBlacklist, currentPage, itemsPerPage]);
+  const handleEditEntry = async (id, updatedData) => {
+    try {
+      await blacklistService.update(id, updatedData);
+      setBlacklist(blacklist.map(entry => entry.id === id ? { ...entry, ...updatedData } : entry));
+      setEditEntry(null);
+    } catch (error) { console.error(error); }
+  };
 
-    // Reset to page 1 when filters change
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, statusFilter]);
+  const handleDeleteEntry = async (id) => {
+    if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบรายงานนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+      try {
+        await blacklistService.delete(id);
+        setBlacklist(blacklist.filter(entry => entry.id !== id));
+        toast({ title: "ลบข้อมูลเรียบร้อยแล้ว" });
+      } catch (error) { console.error(error); }
+    }
+  };
 
-    // Export to CSV
-    const handleExport = () => {
-        const headers = ['ชื่อ-นามสกุล', 'พฤติกรรม', 'ผู้แจ้ง', 'วันที่', 'สถานะ'];
-        const csvContent = [
-            headers.join(','),
-            ...filteredBlacklist.map(entry => [
-                entry.name,
-                entry.offense,
-                entry.reportedBy,
-                entry.date,
-                entry.status
-            ].join(','))
-        ].join('\n');
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      await blacklistService.updateStatus(id, newStatus);
+      setBlacklist(blacklist.map(entry => entry.id === id ? { ...entry, status: newStatus } : entry));
+      toast({ title: "อัปเดตสถานะสำเร็จ" });
+    } catch (error) { console.error(error); }
+  };
 
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `blacklist_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
+  const paginatedBlacklist = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return blacklist.slice(startIndex, startIndex + itemsPerPage);
+  }, [blacklist, currentPage]);
 
-        toast({
-            title: "✅ ส่งออกข้อมูลสำเร็จ",
-            description: `ส่งออกข้อมูล ${filteredBlacklist.length} รายการ`,
-        });
-    };
+  const stats = useMemo(() => ({
+    total: blacklist.length,
+    pending: blacklist.filter(e => e.status === 'pending').length,
+    approved: blacklist.filter(e => e.status === 'approved').length,
+    rejected: blacklist.filter(e => e.status === 'rejected').length,
+  }), [blacklist]);
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-        case 'approved': return <Badge variant="secondary" className="bg-green-100 text-green-800">อนุมัติแล้ว</Badge>;
-        case 'pending': return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">รอดำเนินการ</Badge>;
-        case 'rejected': return <Badge variant="destructive">ปฏิเสธ</Badge>;
-        default: return <Badge variant="outline">ไม่ระบุ</Badge>;
-        }
-    };
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'approved': return { bg: 'bg-green-50/70', text: 'text-green-600', dot: 'bg-green-500', label: 'อนุมัติแล้ว' };
+      case 'pending': return { bg: 'bg-orange-50/70', text: 'text-orange-600', dot: 'bg-orange-500', label: 'รอดำเนินการ' };
+      case 'rejected': return { bg: 'bg-red-50/70', text: 'text-red-700', dot: 'bg-red-500', label: 'ติดธง/ปฏิเสธ' };
+      default: return { bg: 'bg-gray-50/70', text: 'text-gray-600', dot: 'bg-gray-500', label: 'ไม่ระบุ' };
+    }
+  };
 
-    return (
-        <>
-        <Helmet>
-            <title>จัดการบัญชีดำ - แดชบอร์ดแอดมิน</title>
-        </Helmet>
-         <motion.div
-            key="manage-blacklist"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-        >
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div>
-                            <CardTitle>จัดการบัญชีดำ</CardTitle>
-                            <CardDescription>
-                                ค้นหา, กรอง และจัดการคำร้องทั้งหมดในระบบ
-                            </CardDescription>
+  return (
+    <div className="space-y-6 pb-6">
+      <Helmet>
+        <title>จัดการบัญชีดำช่าง | CheckChang Admin</title>
+      </Helmet>
+
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">จัดการบัญชีดำ</h1>
+          <p className="text-gray-500 mt-0.5 text-xs font-medium">ตรวจสอบและบริหารจัดการรายชื่อช่างที่มีพฤติกรรมไม่เหมาะสมในระบบ</p>
+        </div>
+        <div className="flex items-center gap-2 text-gray-400">
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-gray-100 transition-colors">
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-gray-100 transition-colors">
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Overview Grid - REMOVED to separate from Dashboard */}
+      <div className="flex items-center justify-between bg-white p-6 rounded-[1.5rem] shadow-sm border border-gray-50">
+        <div className="flex items-center gap-6">
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">รายการทั้งหมด</p>
+            <p className="text-xl font-black text-gray-900 mt-0.5">{stats.total} รายการ</p>
+          </div>
+          <div className="h-8 w-px bg-gray-100"></div>
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">รอดำเนินการ</p>
+            <p className="text-xl font-black text-orange-500 mt-0.5">{stats.pending} รายการ</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="rounded-xl h-10 text-xs font-bold border-gray-100">
+            <Download className="mr-2 h-3.5 w-3.5" /> ส่งออก Excel
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Table Section */}
+      <Card className="border-none bg-white shadow-xl shadow-gray-200/40 rounded-[1.5rem] overflow-hidden">
+        <CardHeader className="p-8 pb-2">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="text-lg font-bold text-gray-900 tracking-tight">สารบบบัญชีดำช่าง</CardTitle>
+              <CardDescription className="text-[10px] text-gray-400 font-bold mt-0.5 uppercase tracking-wider">จัดการฐานข้อมูลกลาง</CardDescription>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-60">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="ค้นหาชื่อช่าง..."
+                  className="pl-9 rounded-xl bg-gray-50 border-none py-4 text-xs h-10 focus-visible:ring-1 focus-visible:ring-gray-200"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <ReportForm
+                onAddEntry={addEntry}
+                editEntry={editEntry}
+                onEditEntry={handleEditEntry}
+                open={dialogOpen}
+                setOpen={setDialogOpen}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-8">
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">ข้อมูลช่าง</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4">กรณีที่แจ้ง</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 text-center">สถานะ</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 text-center">วันที่รายงาน</TableHead>
+                  <TableHead className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 text-right">ดำเนินการ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedBlacklist.length > 0 ? paginatedBlacklist.map((entry) => {
+                  const status = getStatusStyle(entry.status);
+                  return (
+                    <TableRow key={entry.id} className="border-b border-gray-50 hover:bg-gray-50/30 transition-colors group">
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-gray-900 flex items-center justify-center text-[#FF6B35] font-bold text-sm group-hover:scale-105 transition-all cursor-default">
+                            {entry.name[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-gray-900 leading-tight">{entry.name}</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <User className="h-2.5 w-2.5 text-gray-400" />
+                              <p className="text-[9px] text-gray-400 font-bold uppercase">รหัส: #{entry.id.toString().slice(-4)}</p>
+                            </div>
+                          </div>
                         </div>
-                         <ReportForm 
-                            onAddEntry={addEntry} 
-                            editEntry={editEntry}
-                            onEditEntry={handleEditEntry}
-                            open={dialogOpen}
-                            setOpen={setDialogOpen}
-                        />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
-                        <div className="flex-grow relative w-full">
-                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                           <Input
-                             type="text"
-                             placeholder="ค้นหาชื่อ, พฤติกรรม..."
-                             className="pl-10 w-full"
-                             value={searchTerm}
-                             onChange={(e) => setSearchTerm(e.target.value)}
-                           />
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="max-w-[200px]">
+                          <p className="text-xs font-medium text-gray-600 truncate">{entry.offense}</p>
+                          <p className="text-[9px] text-gray-400 font-bold mt-0.5 uppercase italic">โดย: {entry.reportedBy}</p>
                         </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <Select value={statusFilter} onValueChange={setStatusFilter}>
-                              <SelectTrigger className="w-full sm:w-[150px]">
-                                  <SelectValue placeholder="สถานะ" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="all">ทั้งหมด</SelectItem>
-                                  <SelectItem value="pending">รอดำเนินการ</SelectItem>
-                                  <SelectItem value="approved">อนุมัติ</SelectItem>
-                                  <SelectItem value="rejected">ปฏิเสธ</SelectItem>
-                              </SelectContent>
-                          </Select>
-                          <Button 
-                            variant="outline" 
-                            onClick={handleExport}
-                            className="w-full sm:w-auto"
+                      </TableCell>
+                      <TableCell className="py-4 text-center">
+                        <div className={`inline-flex items-center px-3 py-1.5 rounded-lg ${status.bg} border-none`}>
+                          <div className={`h-1.5 w-1.5 rounded-full ${status.dot} mr-2 shadow-sm`}></div>
+                          <span className={`text-[10px] font-bold ${status.text}`}>{status.label}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 text-center text-xs font-bold text-gray-500">
+                        {new Date(entry.date).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </TableCell>
+                      <TableCell className="py-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-lg hover:bg-green-50 hover:text-green-600 transition-all"
+                            onClick={() => handleStatusChange(entry.id, 'approved')}
                           >
-                            <Download className="mr-2 h-4 w-4" />
-                            <span className="hidden sm:inline">ส่งออก</span>
+                            <CheckCircle className="h-4 w-4" />
                           </Button>
-                        </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-600">ทั้งหมด</p>
-                        <p className="text-xl font-bold text-gray-900">{filteredBlacklist.length}</p>
-                      </div>
-                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
-                        <p className="text-xs text-yellow-700">รอดำเนินการ</p>
-                        <p className="text-xl font-bold text-yellow-900">{filteredBlacklist.filter(e => e.status === 'pending').length}</p>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                        <p className="text-xs text-green-700">อนุมัติ</p>
-                        <p className="text-xl font-bold text-green-900">{filteredBlacklist.filter(e => e.status === 'approved').length}</p>
-                      </div>
-                      <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-                        <p className="text-xs text-red-700">ปฏิเสธ</p>
-                        <p className="text-xl font-bold text-red-900">{filteredBlacklist.filter(e => e.status === 'rejected').length}</p>
-                      </div>
-                    </div>
-
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ชื่อ-นามสกุล</TableHead>
-                          <TableHead className="hidden md:table-cell">พฤติกรรม</TableHead>
-                          <TableHead className="hidden sm:table-cell">ผู้แจ้ง</TableHead>
-                          <TableHead className="hidden md:table-cell text-center">วันที่</TableHead>
-                          <TableHead className="text-center">สถานะ</TableHead>
-                          <TableHead className="text-right">จัดการ</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedBlacklist.length > 0 ? paginatedBlacklist.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell className="font-medium">{entry.name}</TableCell>
-                            <TableCell className="hidden md:table-cell max-w-xs truncate">{entry.offense}</TableCell>
-                            <TableCell className="hidden sm:table-cell text-muted-foreground">{entry.reportedBy}</TableCell>
-                            <TableCell className="hidden md:table-cell text-center">{entry.date}</TableCell>
-                            <TableCell className="text-center">{getStatusBadge(entry.status)}</TableCell>
-                            <TableCell className="text-right">
-                               <div className="flex items-center justify-end gap-1">
-                                 <Button 
-                                   variant="ghost" 
-                                   size="sm" 
-                                   onClick={() => handleStatusChange(entry.id, 'approved')} 
-                                   title="อนุมัติ"
-                                   className="hover:bg-green-50"
-                                 >
-                                      <CheckCircle className="h-4 w-4 text-green-600" />
-                                 </Button>
-                                 <Button 
-                                   variant="ghost" 
-                                   size="sm" 
-                                   onClick={() => handleStatusChange(entry.id, 'rejected')} 
-                                   title="ปฏิเสธ"
-                                   className="hover:bg-red-50"
-                                 >
-                                      <XCircle className="h-4 w-4 text-red-600" />
-                                 </Button>
-                                 <DropdownMenu>
-                                   <DropdownMenuTrigger asChild>
-                                     <Button variant="ghost" size="sm" title="ตัวเลือกเพิ่มเติม">
-                                       <MoreVertical className="h-4 w-4" />
-                                     </Button>
-                                   </DropdownMenuTrigger>
-                                   <DropdownMenuContent align="end">
-                                     <DropdownMenuLabel>ตัวเลือก</DropdownMenuLabel>
-                                     <DropdownMenuSeparator />
-                                     <DropdownMenuItem 
-                                       onClick={() => {
-                                         setEditEntry(entry);
-                                         setDialogOpen(true);
-                                       }}
-                                       className="cursor-pointer"
-                                     >
-                                       <Edit className="mr-2 h-4 w-4" />
-                                       แก้ไขข้อมูล
-                                     </DropdownMenuItem>
-                                     <DropdownMenuSeparator />
-                                     <DropdownMenuItem 
-                                       onClick={() => handleDeleteEntry(entry.id)}
-                                       className="text-red-600 focus:text-red-600 cursor-pointer"
-                                     >
-                                       <Trash2 className="mr-2 h-4 w-4" />
-                                       ลบรายงาน
-                                     </DropdownMenuItem>
-                                   </DropdownMenuContent>
-                                 </DropdownMenu>
-                               </div>
-                            </TableCell>
-                          </TableRow>
-                        )) : (
-                          <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
-                              ไม่พบข้อมูลที่ตรงกับการค้นหา
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Pagination */}
-                  {filteredBlacklist.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-                      <div className="text-sm text-gray-600">
-                        แสดง {((currentPage - 1) * itemsPerPage) + 1} ถึง {Math.min(currentPage * itemsPerPage, filteredBlacklist.length)} จากทั้งหมด {filteredBlacklist.length} รายการ
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                          disabled={currentPage === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                          <span className="hidden sm:inline ml-1">ก่อนหน้า</span>
-                        </Button>
-                        
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum;
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-                            
-                            return (
-                              <Button
-                                key={pageNum}
-                                variant={currentPage === pageNum ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setCurrentPage(pageNum)}
-                                className={currentPage === pageNum ? "bg-gray-900 hover:bg-gray-800" : ""}
-                              >
-                                {pageNum}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-700 transition-all"
+                            onClick={() => handleStatusChange(entry.id, 'rejected')}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-white border border-transparent hover:border-gray-100 transition-all">
+                                <MoreVertical className="h-4 w-4" />
                               </Button>
-                            );
-                          })}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 border-gray-100 shadow-2xl">
+                              <DropdownMenuItem className="rounded-lg py-2 cursor-pointer text-xs font-semibold" onClick={() => { setEditEntry(entry); setDialogOpen(true); }}>
+                                <Edit className="mr-2 h-3.5 w-3.5" /> แก้ไขข้อมูล
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="rounded-lg py-2 cursor-pointer text-xs font-bold text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteEntry(entry.id)}>
+                                <Trash2 className="mr-2 h-3.5 w-3.5" /> ลบถาวร
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                          disabled={currentPage === totalPages}
-                        >
-                          <span className="hidden sm:inline mr-1">ถัดไป</span>
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-16 w-16 rounded-full bg-gray-50 flex items-center justify-center">
+                          <AlertCircle className="h-8 w-8 text-gray-200" />
+                        </div>
+                        <p className="text-gray-400 font-bold text-xs uppercase tracking-wider">ไม่พบข้อมูลที่ค้นหา</p>
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-            </Card>
-        </motion.div>
-        </>
-    );
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination Area */}
+          {blacklist.length > itemsPerPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                แสดง <span className="text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, blacklist.length)}</span> จาก <span className="text-gray-900">{blacklist.length}</span>
+              </p>
+              <div className="flex items-center gap-1.5 font-bold">
+                <Button
+                  variant="ghost"
+                  className="rounded-lg h-9 w-9 p-0 border border-gray-100 hover:bg-gray-50"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.ceil(blacklist.length / itemsPerPage) }).map((_, i) => (
+                    <Button
+                      key={i}
+                      variant={currentPage === i + 1 ? 'default' : 'ghost'}
+                      className={`h-9 w-9 rounded-lg font-bold text-xs ${currentPage === i + 1 ? 'bg-gray-900 text-white' : 'hover:bg-gray-50 border border-transparent'}`}
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="ghost"
+                  className="rounded-lg h-9 w-9 p-0 border border-gray-100 hover:bg-gray-50"
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(blacklist.length / itemsPerPage), p + 1))}
+                  disabled={currentPage === Math.ceil(blacklist.length / itemsPerPage)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 export default ManageBlacklistPage;

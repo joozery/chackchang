@@ -7,12 +7,12 @@ export const API_CONFIG = {
     // Health & Info
     HEALTH: '/health',
     INFO: '/',
-    
+
     // Blacklist - Public
     BLACKLIST_PUBLIC: '/blacklist/public',
     BLACKLIST_PUBLIC_BY_ID: (id) => `/blacklist/public/${id}`,
     BLACKLIST_STATS: '/blacklist/stats',
-    
+
     // Blacklist - Admin
     BLACKLIST: '/blacklist',
     BLACKLIST_BY_ID: (id) => `/blacklist/${id}`,
@@ -23,10 +23,15 @@ export const API_CONFIG = {
 // Helper function to make API calls
 export const apiCall = async (endpoint, options = {}) => {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`;
-  
+
   const defaultHeaders = {
     'Content-Type': 'application/json',
   };
+
+  // Remove Content-Type if body is FormData (let browser set it)
+  if (options.body instanceof FormData) {
+    delete defaultHeaders['Content-Type'];
+  }
 
   // Add authorization token if available (for future use)
   const token = localStorage.getItem('token');
@@ -44,7 +49,7 @@ export const apiCall = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
-    
+
     // Handle non-JSON responses
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {

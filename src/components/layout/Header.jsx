@@ -10,8 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { LogOut, UserCircle, Settings, Home, Bell, Menu } from 'lucide-react';
+import { LogOut, UserCircle, Settings, Home, Bell, Menu, Search, Globe, Mail } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 const Header = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
@@ -23,84 +24,94 @@ const Header = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-200 bg-white px-4 sm:px-6 shadow-sm">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 bg-white/80 backdrop-blur-md px-6 sm:px-8 border-b border-gray-100">
       {/* Mobile Menu Button */}
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className="md:hidden"
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden rounded-xl hover:bg-gray-100"
         onClick={onMenuClick}
       >
         <Menu className="h-5 w-5" />
       </Button>
 
-      {/* Page Title */}
-      <div className="flex-1">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-900">ระบบจัดการหลังบ้าน</h2>
-        <p className="hidden sm:block text-xs text-gray-500">จัดการข้อมูลบัญชีดำช่าง</p>
+      {/* Global Search Bar */}
+      <div className="hidden lg:flex items-center gap-6 flex-1 max-w-lg">
+        <div className="relative w-full group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-[#FF6B35] transition-colors" />
+          <Input
+            placeholder="ค้นหารายงาน, ชื่อสมาชิก หรือการตั้งค่า..."
+            className="pl-11 pr-4 bg-gray-50 border-none rounded-xl focus-visible:ring-2 focus-visible:ring-[#FF6B35]/20 focus-visible:bg-white transition-all w-full text-xs font-medium h-10"
+          />
+        </div>
       </div>
 
+      <div className="flex-1"></div>
+
       {/* Right Section */}
-      <div className="flex items-center gap-3">
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-gray-600" />
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
-            3
-          </Badge>
-        </Button>
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Quick Actions */}
+        <div className="hidden sm:flex items-center gap-1.5">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-gray-400 hover:text-gray-900 transition-colors">
+            <Globe className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-gray-400 hover:text-gray-900 transition-colors relative">
+            <Mail className="h-4 w-4" />
+            <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 rounded-full bg-[#FF6B35]"></span>
+          </Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-gray-400 hover:text-gray-900 transition-colors relative">
+            <Bell className="h-4 w-4" />
+            <Badge className="absolute -top-1 -right-1 h-3.5 w-3.5 p-0 flex items-center justify-center bg-gray-900 text-white text-[9px] border border-white">
+              5
+            </Badge>
+          </Button>
+        </div>
 
         {/* Divider */}
-        <div className="h-8 w-px bg-gray-200"></div>
+        <div className="h-6 w-px bg-gray-100 mx-2 hidden sm:block"></div>
 
-        {/* User Menu */}
+        {/* User Profile */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 hover:bg-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="hidden sm:block text-right">
-                  <p className="text-sm font-medium text-gray-900">{user?.username || 'Admin'}</p>
-                  <p className="text-xs text-gray-500">ผู้ดูแลระบบ</p>
-                </div>
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white font-semibold">
-                  {(user?.username || 'A')[0].toUpperCase()}
-                </div>
+            <Button variant="ghost" className="flex items-center gap-3 p-1 pr-3 rounded-xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100 h-10">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white text-[10px] font-bold shadow-md">
+                {(user?.username || 'A')[0].toUpperCase()}
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-xs font-bold text-gray-900 leading-none">{user?.username || 'แอดมิน'}</p>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight mt-1">{user?.role === 'admin' ? 'ผู้ดูแลระบบสูงสุด' : 'เจ้าหน้าที่'}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.username || 'Admin'}</p>
-                <p className="text-xs leading-none text-gray-500">
-                  {user?.email || 'admin@ตรวจสอบช่าง.com'}
-                </p>
+          <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl border-gray-100 shadow-2xl">
+            <DropdownMenuLabel className="p-3">
+              <div className="flex flex-col space-y-0.5">
+                <p className="text-xs font-bold leading-none">{user?.username || 'แอดมิน'}</p>
+                <p className="text-[10px] text-gray-500">{user?.email || 'admin@checkchang.com'}</p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/dashboard" className="cursor-pointer">
-                <UserCircle className="mr-2 h-4 w-4" />
-                <span>โปรไฟล์</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/dashboard/settings" className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>ตั้งค่า</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/" className="cursor-pointer">
-                <Home className="mr-2 h-4 w-4" />
-                <span>หน้าหลัก</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>ออกจากระบบ</span>
-            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-gray-50" />
+            <div className="p-1">
+              <DropdownMenuItem asChild className="rounded-lg cursor-pointer py-2">
+                <Link to="/dashboard" className="flex items-center">
+                  <UserCircle className="mr-3 h-4 w-4 text-gray-400" />
+                  <span className="font-semibold text-[11px]">ข้อมูลส่วนตัว</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="rounded-lg cursor-pointer py-2">
+                <Link to="/dashboard/settings" className="flex items-center">
+                  <Settings className="mr-3 h-4 w-4 text-gray-400" />
+                  <span className="font-semibold text-[11px]">ตั้งค่าระบบ</span>
+                </Link>
+              </DropdownMenuItem>
+            </div>
+            <DropdownMenuSeparator className="bg-gray-50" />
+            <div className="p-1">
+              <DropdownMenuItem onClick={handleLogout} className="rounded-lg cursor-pointer py-2 text-red-600 focus:text-red-600 focus:bg-red-50">
+                <LogOut className="mr-3 h-4 w-4" />
+                <span className="font-bold text-[11px]">ออกจากระบบ</span>
+              </DropdownMenuItem>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

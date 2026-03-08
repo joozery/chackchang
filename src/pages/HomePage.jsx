@@ -17,12 +17,12 @@ import { Search, Frown, AlertTriangle, Calendar, User, Eye, Grid3x3, List, Hash,
 import blacklistService from '@/services/blacklistService';
 
 const initialBlacklist = [
-  { 
-    id: 1, 
+  {
+    id: 1,
     reportId: '497050',
     name: 'สมชาย ทิ้งงาน',
     idCard: '1234567890123',
-    offense: 'รับเงินมัดจำแล้วหาย ไม่สามารถติดต่อได้', 
+    offense: 'รับเงินมัดจำแล้วหาย ไม่สามารถติดต่อได้',
     workType: 'รับซ่อมบ้าน งานทาสี',
     reportedBy: 'สมหญิง ใจดี',
     bankAccount: '123-4-56789-0',
@@ -34,12 +34,12 @@ const initialBlacklist = [
     reportCount: 1,
     totalAmount: 15000
   },
-  { 
-    id: 2, 
+  {
+    id: 2,
     reportId: '497051',
     name: 'ประวิทย์ ไม่มา',
     idCard: '2110201076xxx',
-    offense: 'งานไม่เรียบร้อย ของไม่ตรงสเปคที่ตกลงกันไว้', 
+    offense: 'งานไม่เรียบร้อย ของไม่ตรงสเปคที่ตกลงกันไว้',
     workType: 'งานติดตั้งแอร์',
     reportedBy: 'สมศักดิ์ แข็งแรง',
     bankAccount: '987-6-54321-0',
@@ -51,12 +51,12 @@ const initialBlacklist = [
     reportCount: 2,
     totalAmount: 17000
   },
-  { 
-    id: 3, 
+  {
+    id: 3,
     reportId: '497052',
     name: 'มานะ โกงเงิน',
     idCard: '3567890123456',
-    offense: 'เบิกเงินค่าของเกินจริง และไม่แสดงใบเสร็จ', 
+    offense: 'เบิกเงินค่าของเกินจริง และไม่แสดงใบเสร็จ',
     workType: 'งานไฟฟ้า ติดตั้งระบบไฟ',
     reportedBy: 'สมศรี มีสุข',
     bankAccount: '456-7-89012-3',
@@ -68,12 +68,12 @@ const initialBlacklist = [
     reportCount: 3,
     totalAmount: 36000
   },
-  { 
-    id: 4, 
+  {
+    id: 4,
     reportId: '497053',
     name: 'ชาติชาย ใช้วัสดุปลอม',
     idCard: '4890123456789',
-    offense: 'ใช้วัสดุราคาถูกกว่าที่ตกลงไว้ในสัญญา', 
+    offense: 'ใช้วัสดุราคาถูกกว่าที่ตกลงไว้ในสัญญา',
     workType: 'งานปูกระเบื้อง',
     reportedBy: 'สมปอง อดทน',
     bankAccount: '789-0-12345-6',
@@ -93,15 +93,20 @@ export function HomePage() {
   const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [stats, setStats] = useState({ total: 0, totalReports: 0, totalAmount: 0 });
   const navigate = useNavigate();
 
-  // Fetch blacklist data from API
+  // Fetch blacklist data and stats from API
   useEffect(() => {
-    const fetchBlacklist = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await blacklistService.getApproved();
-        setBlacklist(data);
+        const [blacklistData, statsData] = await Promise.all([
+          blacklistService.getApproved(),
+          blacklistService.getStats()
+        ]);
+        setBlacklist(blacklistData);
+        setStats(statsData);
         setError(null);
       } catch (err) {
         console.error('Error fetching blacklist:', err);
@@ -113,15 +118,20 @@ export function HomePage() {
       }
     };
 
-    fetchBlacklist();
+    fetchData();
   }, []);
 
   const filteredBlacklist = searchTerm
     ? blacklist.filter(
-        (entry) =>
-          entry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.offense.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      (entry) =>
+        entry.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.offense?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.workType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.bankAccount?.toString().includes(searchTerm) ||
+        entry.bankName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.idCard?.toString().includes(searchTerm) ||
+        entry.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : [];
 
   const containerVariants = {
@@ -166,7 +176,7 @@ export function HomePage() {
             </div>
 
             <div className="container mx-auto px-4 relative z-10">
-              <motion.h1 
+              <motion.h1
                 className="text-3xl md:text-5xl font-extrabold mb-4 text-white"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -174,7 +184,7 @@ export function HomePage() {
               >
                 ตรวจสอบบัญชีดำช่าง
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="max-w-2xl mx-auto text-base md:text-lg text-gray-300 mb-8 font-light"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -182,8 +192,8 @@ export function HomePage() {
               >
                 ค้นหาเพื่อความมั่นใจ ก่อนตัดสินใจจ้างงาน
               </motion.p>
-              
-              <motion.div 
+
+              <motion.div
                 className="max-w-3xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -192,7 +202,7 @@ export function HomePage() {
                 <div className="relative group">
                   {/* Glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-gray-300/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300 opacity-50"></div>
-                  
+
                   <div className="relative bg-white rounded-xl shadow-2xl p-1.5 flex items-center">
                     <div className="flex-shrink-0 pl-3">
                       <Search className="h-5 w-5 text-gray-400" />
@@ -204,7 +214,7 @@ export function HomePage() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    <Button 
+                    <Button
                       className="bg-black hover:bg-gray-800 text-white h-10 px-6 rounded-lg text-sm font-semibold shadow-lg transition-all duration-300 hover:shadow-xl mr-1"
                       onClick={() => {
                         // ค้นหาเมื่อกดปุ่ม
@@ -217,9 +227,9 @@ export function HomePage() {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* Search suggestions */}
-                <motion.div 
+                <motion.div
                   className="mt-6 flex flex-wrap justify-center gap-3"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -239,25 +249,27 @@ export function HomePage() {
               </motion.div>
 
               {/* Stats */}
-              <motion.div 
+              <motion.div
                 className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 1 }}
               >
                 <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10">
-                  <div className="text-2xl font-bold text-white mb-0.5">{blacklist.length}</div>
+                  <div className="text-2xl font-bold text-white mb-0.5">
+                    {Number(stats.approved || blacklist.length)}
+                  </div>
                   <div className="text-gray-400 text-xs">รายงานทั้งหมด</div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10">
                   <div className="text-2xl font-bold text-white mb-0.5">
-                    {blacklist.reduce((sum, item) => sum + (item.reportCount || 1), 0)}
+                    {Number(stats.totalReports || blacklist.reduce((sum, item) => sum + (Number(item.reportCount) || 1), 0))}
                   </div>
                   <div className="text-gray-400 text-xs">ครั้งที่ถูกรายงาน</div>
                 </div>
                 <div className="bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10">
                   <div className="text-2xl font-bold text-white mb-0.5">
-                    {(blacklist.reduce((sum, item) => sum + (item.totalAmount || item.amount || 0), 0) / 1000).toFixed(0)}K
+                    {(Number(stats.totalAmount || blacklist.reduce((sum, item) => sum + (Number(item.totalAmount) || Number(item.amount) || 0), 0)) / 1000).toFixed(0)}K
                   </div>
                   <div className="text-gray-400 text-xs">ยอดเงินรวม (บาท)</div>
                 </div>
@@ -302,9 +314,9 @@ export function HomePage() {
                                 <TableCell className="font-medium">{entry.name}</TableCell>
                                 <TableCell>{entry.offense}</TableCell>
                                 <TableCell>
-                                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(entry)}>
-                                        <Eye className="h-4 w-4" />
-                                    </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleViewDetails(entry)}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
                                 </TableCell>
                               </motion.tr>
                             ))}
@@ -312,7 +324,7 @@ export function HomePage() {
                         </Table>
                       </motion.div>
                     ) : (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="text-center text-muted-foreground py-10"
@@ -367,7 +379,7 @@ export function HomePage() {
                                   {entry.offense}
                                 </CardDescription>
                               </CardHeader>
-                              
+
                               <CardContent className="flex-grow py-3 px-4">
                                 <div className="space-y-2.5 text-xs">
                                   {/* Grid 2 columns */}
@@ -379,7 +391,7 @@ export function HomePage() {
                                         <span className="font-semibold text-gray-900 truncate block">{entry.reportId || '-'}</span>
                                       </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-2">
                                       <DollarSign className="h-4 w-4 text-red-600 flex-shrink-0" />
                                       <div className="flex-grow min-w-0">
@@ -387,7 +399,7 @@ export function HomePage() {
                                         <span className="font-bold text-red-600 truncate block">{(entry.amount || 0).toLocaleString()} บาท</span>
                                       </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-2">
                                       <User className="h-4 w-4 text-purple-600 flex-shrink-0" />
                                       <div className="flex-grow min-w-0">
@@ -395,7 +407,7 @@ export function HomePage() {
                                         <span className="font-semibold text-gray-900 truncate block">{entry.name}</span>
                                       </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-2">
                                       <Clock className="h-4 w-4 text-gray-600 flex-shrink-0" />
                                       <div className="flex-grow min-w-0">
@@ -404,7 +416,7 @@ export function HomePage() {
                                       </div>
                                     </div>
                                   </div>
-                                  
+
                                   {/* สถิติ */}
                                   <div className="pt-2 mt-1 border-t border-gray-200">
                                     <div className="flex items-center gap-2">
@@ -421,17 +433,17 @@ export function HomePage() {
                                   </div>
                                 </div>
                               </CardContent>
-                              
+
                               <CardFooter className="pt-2 pb-4 px-4">
-                                  <Button 
-                                    variant="secondary" 
-                                    size="sm"
-                                    className="w-full text-xs h-9" 
-                                    onClick={() => handleViewDetails(entry)}
-                                  >
-                                      <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                      ดูรายละเอียด
-                                  </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  className="w-full text-xs h-9"
+                                  onClick={() => handleViewDetails(entry)}
+                                >
+                                  <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                  ดูรายละเอียด
+                                </Button>
                               </CardFooter>
                             </Card>
                           </motion.div>
@@ -453,7 +465,7 @@ export function HomePage() {
                                         <p className="text-muted-foreground text-sm line-clamp-2">{entry.offense}</p>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Detailed Info Grid */}
                                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                       <div className="flex items-center gap-2">
@@ -463,7 +475,7 @@ export function HomePage() {
                                           <span className="font-semibold text-gray-900 text-xs truncate block">{entry.reportId || '-'}</span>
                                         </div>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2">
                                         <DollarSign className="h-4 w-4 text-red-600 flex-shrink-0" />
                                         <div className="min-w-0">
@@ -471,7 +483,7 @@ export function HomePage() {
                                           <span className="font-bold text-red-600 text-xs">{(entry.amount || 0).toLocaleString()} บาท</span>
                                         </div>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2">
                                         <Clock className="h-4 w-4 text-gray-600 flex-shrink-0" />
                                         <div className="min-w-0">
@@ -479,7 +491,7 @@ export function HomePage() {
                                           <span className="font-semibold text-gray-900 text-xs">{entry.date}</span>
                                         </div>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2">
                                         <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0" />
                                         <div className="min-w-0">
@@ -493,13 +505,13 @@ export function HomePage() {
                                       </div>
                                     </div>
                                   </div>
-                                  
+
                                   {/* Action Button */}
                                   <div className="flex items-center lg:items-start">
-                                    <Button 
+                                    <Button
                                       variant="secondary"
                                       size="sm"
-                                      className="w-full lg:w-auto lg:min-w-[140px] text-xs h-9" 
+                                      className="w-full lg:w-auto lg:min-w-[140px] text-xs h-9"
                                       onClick={() => handleViewDetails(entry)}
                                     >
                                       <Eye className="mr-1.5 h-3.5 w-3.5" />

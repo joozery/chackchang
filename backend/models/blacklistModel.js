@@ -26,9 +26,9 @@ class BlacklistModel {
       }
 
       if (filters.search) {
-        conditions.push('(name LIKE ? OR offense LIKE ? OR id_card LIKE ?)');
+        conditions.push('(name LIKE ? OR offense LIKE ? OR id_card LIKE ? OR work_type LIKE ? OR bank_account LIKE ? OR bank_name LIKE ? OR description LIKE ?)');
         const searchTerm = `%${filters.search}%`;
-        params.push(searchTerm, searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
       if (conditions.length > 0) {
@@ -68,9 +68,9 @@ class BlacklistModel {
       const params = [];
 
       if (search) {
-        query += ' AND (name LIKE ? OR offense LIKE ? OR id_card LIKE ?)';
+        query += ' AND (name LIKE ? OR offense LIKE ? OR id_card LIKE ? OR work_type LIKE ? OR bank_account LIKE ? OR bank_name LIKE ? OR description LIKE ?)';
         const searchTerm = `%${search}%`;
-        params.push(searchTerm, searchTerm, searchTerm);
+        params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
       query += ' ORDER BY created_at DESC';

@@ -88,19 +88,10 @@ export const register = async (req, res) => {
     // Determine role
     const role = isTechnicianBool ? 'technician' : 'user';
 
-    // Handle profile image upload
+    // Handle profile image upload (Cloudinary)
     let profileImagePath = null;
     if (profileImageFile) {
-      // Ensure uploads directory exists
-      const uploadsDir = path.resolve('uploads');
-      try {
-        await fs.access(uploadsDir);
-      } catch {
-        await fs.mkdir(uploadsDir, { recursive: true });
-      }
-      
-      // File is already saved by multer, just get the path
-      profileImagePath = `/uploads/${profileImageFile.filename}`;
+      profileImagePath = profileImageFile.path; // Cloudinary full URL
     }
 
     // Insert user
@@ -235,7 +226,7 @@ export const login = async (req, res) => {
 export const getCurrentUser = async (req, res) => {
   try {
     const userId = req.user?.userId;
-    
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -261,16 +252,30 @@ export const getCurrentUser = async (req, res) => {
     let technicianData = null;
     if (user.role === 'technician') {
       const [technicians] = await pool.query(
-        'SELECT work_types, rating, total_reviews, total_jobs, is_verified FROM technicians WHERE user_id = ?',
+        'SELECT work_types, rating, total_reviews, total_jobs, is_verified, bio FROM technicians WHERE user_id = ?',
         [userId]
       );
       if (technicians.length > 0) {
+        let workTypes = [];
+        const rawWorkTypes = technicians[0].work_types;
+
+        if (typeof rawWorkTypes === 'string') {
+          try {
+            workTypes = JSON.parse(rawWorkTypes || '[]');
+          } catch (e) {
+            workTypes = [];
+          }
+        } else if (Array.isArray(rawWorkTypes)) {
+          workTypes = rawWorkTypes;
+        }
+
         technicianData = {
-          workTypes: JSON.parse(technicians[0].work_types || '[]'),
+          workTypes,
           rating: technicians[0].rating,
           totalReviews: technicians[0].total_reviews,
           totalJobs: technicians[0].total_jobs,
-          isVerified: technicians[0].is_verified
+          isVerified: technicians[0].is_verified,
+          bio: technicians[0].bio || ''
         };
       }
     }
@@ -301,4 +306,184 @@ export const getCurrentUser = async (req, res) => {
     });
   }
 };
+// Update user profile
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const {
+      email,
+      username,
+      firstName,
+      lastName,
+      phone,
+      lineId,
+      facebookLink,
+      workTypes,
+      bio,
+      currentPassword,
+      newPassword
+    } = req.body;
+    const profileImageFile = req.file;
 
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'ไม่พบข้อมูลผู้ใช้'
+      });
+    }
+
+    // If changing password, verify current password
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'กรุณาระบุรหัสผ่านปัจจุบันเพื่อเปลี่ยนรหัสผ่านใหม่'
+        });
+      }
+
+      const [users] = await pool.query('SELECT password FROM users WHERE id = ?', [userId]);
+      if (users.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'ไม่พบข้อมูลผู้ใช้'
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, users[0].password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'รหัสผ่านปัจจุบันไม่ถูกต้อง'
+        });
+      }
+    }
+
+    // Build update query for users table
+    let userUpdateFields = [];
+    let userUpdateParams = [];
+
+    if (email) { userUpdateFields.push('email = ?'); userUpdateParams.push(email); }
+    if (username) { userUpdateFields.push('username = ?'); userUpdateParams.push(username); }
+    if (firstName) { userUpdateFields.push('first_name = ?'); userUpdateParams.push(firstName); }
+    if (lastName) { userUpdateFields.push('last_name = ?'); userUpdateParams.push(lastName); }
+    if (phone) { userUpdateFields.push('phone = ?'); userUpdateParams.push(phone); }
+    if (lineId) { userUpdateFields.push('line_id = ?'); userUpdateParams.push(lineId); }
+    if (facebookLink) { userUpdateFields.push('facebook_link = ?'); userUpdateParams.push(facebookLink); }
+
+    if (profileImageFile) {
+      userUpdateFields.push('profile_image = ?');
+      userUpdateParams.push(profileImageFile.path); // Cloudinary URL
+    }
+
+    if (newPassword) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      userUpdateFields.push('password = ?');
+      userUpdateParams.push(hashedPassword);
+    }
+
+    if (userUpdateFields.length > 0) {
+      const userQuery = `UPDATE users SET ${userUpdateFields.join(', ')} WHERE id = ?`;
+      userUpdateParams.push(userId);
+      await pool.query(userQuery, userUpdateParams);
+    }
+
+    // Update technician table if workTypes or bio provided and user is technician
+    if (workTypes || bio !== undefined) {
+      const [users] = await pool.query('SELECT id, role FROM users WHERE id = ?', [userId]);
+      if (users.length > 0 && users[0].role === 'technician') {
+        const updateTechFields = [];
+        const updateTechParams = [];
+
+        if (workTypes) {
+          let parsedWorkTypes = workTypes;
+          if (typeof workTypes === 'string') {
+            try {
+              parsedWorkTypes = JSON.parse(workTypes);
+            } catch (e) {
+              parsedWorkTypes = workTypes.split(',').filter(Boolean);
+            }
+          }
+          updateTechFields.push('work_types = ?');
+          updateTechParams.push(JSON.stringify(parsedWorkTypes));
+        }
+
+        if (bio !== undefined) {
+          updateTechFields.push('bio = ?');
+          updateTechParams.push(bio);
+        }
+
+        if (updateTechFields.length > 0) {
+          updateTechParams.push(userId);
+          await pool.query(
+            `UPDATE technicians SET ${updateTechFields.join(', ')} WHERE user_id = ?`,
+            updateTechParams
+          );
+        }
+      }
+    }
+
+    // Get updated user and technician data
+    const [updatedUsers] = await pool.query(
+      'SELECT id, username, email, first_name, last_name, phone, role, profile_image, line_id, facebook_link FROM users WHERE id = ?',
+      [userId]
+    );
+
+    let updatedTechnicianData = null;
+    if (updatedUsers[0].role === 'technician') {
+      const [technicians] = await pool.query(
+        'SELECT work_types, rating, total_reviews, total_jobs, is_verified, bio FROM technicians WHERE user_id = ?',
+        [userId]
+      );
+      if (technicians.length > 0) {
+        let workTypes = [];
+        const rawWorkTypes = technicians[0].work_types;
+
+        if (typeof rawWorkTypes === 'string') {
+          try {
+            workTypes = JSON.parse(rawWorkTypes || '[]');
+          } catch (e) {
+            workTypes = [];
+          }
+        } else if (Array.isArray(rawWorkTypes)) {
+          workTypes = rawWorkTypes;
+        }
+
+        updatedTechnicianData = {
+          workTypes,
+          rating: technicians[0].rating,
+          totalReviews: technicians[0].total_reviews,
+          totalJobs: technicians[0].total_jobs,
+          isVerified: technicians[0].is_verified,
+          bio: technicians[0].bio || ''
+        };
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'อัปเดตโปรไฟล์สำเร็จ',
+      data: {
+        user: {
+          id: updatedUsers[0].id,
+          username: updatedUsers[0].username,
+          email: updatedUsers[0].email,
+          firstName: updatedUsers[0].first_name,
+          lastName: updatedUsers[0].last_name,
+          phone: updatedUsers[0].phone,
+          role: updatedUsers[0].role,
+          profileImage: updatedUsers[0].profile_image,
+          lineId: updatedUsers[0].line_id,
+          facebookLink: updatedUsers[0].facebook_link
+        },
+        technician: updatedTechnicianData
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการอัปเดตโปรไฟล์'
+    });
+  }
+};

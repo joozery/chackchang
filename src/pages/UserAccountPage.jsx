@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -7,13 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/lib/hooks/use-auth';
-import { 
-  User, 
-  Mail, 
-  Shield, 
-  Calendar, 
-  Edit, 
+import {
+  User,
+  Mail,
+  Shield,
+  Calendar,
+  Edit,
   Save,
   X,
   AlertTriangle,
@@ -27,114 +29,107 @@ import {
   Link2,
   Briefcase,
   TrendingUp,
-  Verified
+  Verified,
+  Facebook,
+  ShieldCheck,
+  CheckCircle2,
+  ArrowLeft,
+  Share2,
+  ThumbsUp,
+  MapPin,
+  AlertCircle,
+  Loader2,
+  Image as ImageIcon,
+  Award,
+  Trash2,
+  Upload,
+  Plus
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import authService from '@/services/authService';
+import technicianService from '@/services/technicianService';
 
 const UserAccountPage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserInfo } = useAuth();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [technicianData, setTechnicianData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [profileImagePreview, setProfileImagePreview] = useState(null);
+  const profileInputRef = React.useRef(null);
   const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
+    username: '',
+    email: '',
     firstName: '',
     lastName: '',
     phone: '',
     lineId: '',
     facebookLink: '',
+    workTypes: [],
+    bio: '',
+    province: ''
   });
 
-  // Fetch user data
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        // Try to fetch from API if token exists
-        const token = localStorage.getItem('token');
-        if (token && user) {
-          try {
-            const data = await authService.getCurrentUser();
-            setUserData(data.user);
-            setTechnicianData(data.technician);
-            setFormData(prev => ({
-              ...prev,
-              username: data.user.username || prev.username,
-              email: data.user.email || prev.email,
-              firstName: data.user.firstName || '',
-              lastName: data.user.lastName || '',
-              phone: data.user.phone || '',
-              lineId: data.user.lineId || '',
-              facebookLink: data.user.facebookLink || '',
-            }));
-          } catch (error) {
-            console.error('Error fetching user data:', error);
-            // Fallback to localStorage user
-            setUserData(user);
-            // If user is technician, create technician data from localStorage
-            if (user.role === 'technician' || user.isTechnician) {
-              setTechnicianData({
-                workTypes: user.workTypes || [],
-                rating: 0,
-                totalReviews: 0,
-                totalJobs: 0,
-                isVerified: false
-              });
-            }
-          }
-        } else {
-          setUserData(user);
-          // If user is technician, create technician data from localStorage
-          if (user.role === 'technician' || user.isTechnician) {
-            setTechnicianData({
-              workTypes: user.workTypes || [],
-              rating: 0,
-              totalReviews: 0,
-              totalJobs: 0,
-              isVerified: false
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        setUserData(user);
-        // If user is technician, create technician data from localStorage
-        if (user.role === 'technician' || user.isTechnician) {
-          setTechnicianData({
-            workTypes: user.workTypes || [],
-            rating: 0,
-            totalReviews: 0,
-            totalJobs: 0,
-            isVerified: false
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [portfolios, setPortfolios] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadData, setUploadData] = useState({ title: '', description: '', image: null });
+  const fileInputRef = React.useRef(null);
 
+  // Fetch user data
+  const fetchUserData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await authService.getCurrentUser();
+      if (data && data.user) {
+        const u = data.user;
+        const t = data.technician;
+        setUserData(u);
+        setTechnicianData(t);
+        setFormData({
+          username: u.username || '',
+          email: u.email || '',
+          firstName: u.firstName || '',
+          lastName: u.lastName || '',
+          phone: u.phone || '',
+          lineId: u.lineId || '',
+          facebookLink: u.facebookLink || '',
+          workTypes: t?.workTypes || [],
+          bio: t?.bio || '',
+          province: t?.province || ''
+        });
+
+        if (u.role === 'technician') {
+          try {
+            const portResponse = await technicianService.getPortfolioItems(u.id);
+            if (portResponse.success) {
+              setPortfolios(portResponse.data);
+            }
+          } catch (e) {
+            console.error('Fetch portfolio error:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      toast({
+        title: "ผิดพลาด",
+        description: "ไม่สามารถโหลดข้อมูลผู้ใช้ได้",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast, user]);
+
+  useEffect(() => {
     if (user) {
       fetchUserData();
+    } else {
+      navigate('/auth');
     }
-  }, [user]);
-
-  // Mock user reports data
-  const userReports = [
-    { id: 1, technicianName: 'สมชาย ทิ้งงาน', status: 'approved', date: '2025-11-15', offense: 'รับเงินมัดจำแล้วหาย' },
-    { id: 2, technicianName: 'ประวิทย์ ไม่มา', status: 'pending', date: '2025-11-18', offense: 'งานไม่เรียบร้อย' },
-    { id: 3, technicianName: 'มานะ โกงเงิน', status: 'rejected', date: '2025-11-10', offense: 'เบิกเงินเกินจริง' },
-  ];
-
-  const stats = {
-    total: userReports.length,
-    approved: userReports.filter(r => r.status === 'approved').length,
-    pending: userReports.filter(r => r.status === 'pending').length,
-    rejected: userReports.filter(r => r.status === 'rejected').length,
-  };
+  }, [user, fetchUserData, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -144,644 +139,631 @@ const UserAccountPage = () => {
     }));
   };
 
-  // Check if user is technician - check multiple sources
-  const checkIsTechnician = () => {
-    if (!user && !userData) return false;
-    
-    const checkUser = userData || user;
-    const roleCheck = checkUser?.role === 'technician';
-    const isTechnicianCheck = checkUser?.isTechnician === true;
-    const result = roleCheck || isTechnicianCheck;
-    
-    console.log('=== CHECKING IS TECHNICIAN ===');
-    console.log('CheckUser:', checkUser);
-    console.log('Role check:', roleCheck, '(role:', checkUser?.role, ')');
-    console.log('IsTechnician check:', isTechnicianCheck, '(isTechnician:', checkUser?.isTechnician, ')');
-    console.log('Result:', result);
-    console.log('================================');
-    
-    return result;
-  };
-
-  const isTechnician = checkIsTechnician();
-
-  // Debug log
-  useEffect(() => {
-    if (user || userData) {
-      const checkUser = userData || user;
-      console.log('=== DEBUG INFO ===');
-      console.log('User:', user);
-      console.log('UserData:', userData);
-      console.log('CheckUser (userData || user):', checkUser);
-      console.log('User.role:', user?.role);
-      console.log('User.isTechnician:', user?.isTechnician);
-      console.log('UserData.role:', userData?.role);
-      console.log('UserData.isTechnician:', userData?.isTechnician);
-      console.log('TechnicianData:', technicianData);
-      console.log('IsTechnician (calculated):', isTechnician);
-      console.log('==================');
-    }
-  }, [user, userData, technicianData, isTechnician]);
-
-  const handleSave = () => {
-    // In a real app, this would call an API to update user info
-    toast({
-      title: "✅ บันทึกข้อมูลสำเร็จ",
-      description: "ข้อมูลของคุณได้รับการอัปเดตแล้ว",
-    });
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setFormData({
-      username: user?.username || '',
-      email: user?.email || '',
-    });
-    setIsEditing(false);
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'approved':
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-300">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            อนุมัติแล้ว
-          </Badge>
-        );
-      case 'pending':
-        return (
-          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
-            <Clock className="h-3 w-3 mr-1" />
-            รอตรวจสอบ
-          </Badge>
-        );
-      case 'rejected':
-        return (
-          <Badge className="bg-red-100 text-red-800 border-red-300">
-            <XCircle className="h-3 w-3 mr-1" />
-            ปฏิเสธ
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">ไม่ระบุ</Badge>;
+  const handleProfileImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, image: file }));
+      setProfileImagePreview(URL.createObjectURL(file));
     }
   };
 
-  if (!user) {
-    navigate('/auth');
-    return null;
-  }
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const response = await authService.updateProfile(formData);
+
+      if (response.success) {
+        toast({
+          title: "✅ บันทึกข้อมูลสำเร็จ",
+          description: "ข้อมูลของคุณได้รับการอัปเดตแล้ว",
+        });
+        setIsEditing(false);
+        setProfileImagePreview(null);
+        fetchUserData();
+        // Update auth context if needed
+        if (updateUserInfo && response.data?.user) updateUserInfo(response.data.user);
+      } else {
+        toast({
+          title: "❌ เกิดข้อผิดพลาด",
+          description: response.message || "ไม่สามารถอัปเดตข้อมูลได้",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({
+        title: "❌ เกิดข้อผิดพลาด",
+        description: "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadData(prev => ({ ...prev, image: file }));
+    }
+  };
+
+  const handleAddPortfolio = async () => {
+    if (!uploadData.image) {
+      toast({
+        title: "กรุณาเลือกรูปภาพ",
+        description: "ต้องมีรูปภาพสำหรับผลงาน",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const fd = new FormData();
+      fd.append('image', uploadData.image);
+      fd.append('title', uploadData.title);
+      fd.append('description', uploadData.description);
+
+      const response = await technicianService.addPortfolioItem(fd);
+      if (response.success) {
+        toast({ title: "✅ เพิ่มผลงานสำเร็จ", description: "ผลงานของคุณได้ถูกแสดงในโปรไฟล์แล้ว" });
+        setUploadData({ title: '', description: '', image: null });
+        fetchUserData(); // To refresh portfolios
+      } else {
+        toast({ title: "❌ เกิดข้อผิดพลาด", description: response.message, variant: "destructive" });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "❌ เกิดข้อผิดพลาด", description: "ไม่สามารถเพิ่มผลงานได้", variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeletePortfolio = async (id) => {
+    if (!confirm('คุณต้องการลบผลงานนี้ใช่หรือไม่?')) return;
+    try {
+      const response = await technicianService.deletePortfolioItem(id);
+      if (response.success) {
+        toast({ title: "✅ ลบผลงานสำเร็จ", description: "ผลงานได้ถูกลบออกจากระบบแล้ว" });
+        setPortfolios(prev => prev.filter(p => p.id !== id));
+      } else {
+        toast({ title: "❌ เกิดข้อผิดพลาด", description: response.message, variant: "destructive" });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "❌ เกิดข้อผิดพลาด", description: "ไม่สามารถลบผลงานได้", variant: "destructive" });
+    }
+  };
+
+  const isTechnician = userData?.role === 'technician';
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 pt-24 pb-12 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+        <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
+        <p className="text-gray-600 font-medium tracking-wide">กำลังโหลดข้อมูลบัญชี...</p>
       </div>
     );
   }
+
+  const profileImageUrl = profileImagePreview || (userData?.profileImage?.startsWith('http')
+    ? userData.profileImage
+    : userData?.profileImage
+      ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002'}${userData.profileImage}`
+      : null);
 
   return (
     <>
       <Helmet>
         <title>บัญชีของฉัน - รู้ทันช่าง</title>
-        <meta name="description" content="จัดการข้อมูลบัญชีและดูประวัติการแจ้งของคุณ" />
+        <meta name="description" content="จัดการข้อมูลบัญชีและดูประวัติของคุณ" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 pt-24 pb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl"
-        >
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">บัญชีของฉัน</h1>
-            <p className="text-gray-600">จัดการข้อมูลส่วนตัวและดูประวัติการแจ้งของคุณ</p>
+      <div className="min-h-screen bg-gray-50/50 pb-20">
+        {/* Header/Banner Section */}
+        <section className={`relative pt-28 pb-24 bg-gradient-to-br ${isTechnician ? 'from-green-900 via-gray-800 to-black' : 'from-blue-900 via-gray-800 to-black'} overflow-hidden`}>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className={`absolute top-0 right-0 w-[500px] h-[500px] ${isTechnician ? 'bg-green-500/10' : 'bg-blue-500/10'} rounded-full blur-[120px]`}></div>
+            <div className={`absolute bottom-0 left-0 w-[300px] h-[300px] ${isTechnician ? 'bg-emerald-500/5' : 'bg-indigo-500/5'} rounded-full blur-[100px]`}></div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - User Info */}
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 tracking-tight">บัญชีของฉัน</h1>
+                <p className="text-white/80 text-base font-light">จัดการข้อมูลส่วนตัวและตรวจสอบสถานะของคุณ</p>
+              </div>
+              {/* Removed duplicate buttons (Back to Home, Logout) as they are already in the Navbar */}
+            </div>
+          </div>
+        </section>
+
+        {/* Main Content Area */}
+        <div className="container mx-auto px-4 -mt-12 relative z-20">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            {/* Left Column: Profile Insight */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Profile Card */}
-              <Card className="border-2 border-gray-900 shadow-xl">
-                <CardHeader className="bg-gray-900 text-white">
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    ข้อมูลส่วนตัว
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    {/* Avatar */}
-                    <div className="flex justify-center mb-4">
-                      <div className="relative">
-                        {userData?.profileImage && typeof userData.profileImage === 'string' && userData.profileImage.trim() ? (
-                          <img 
-                            src={userData.profileImage.startsWith('/') ? userData.profileImage : `/api${userData.profileImage}`}
-                            alt="Profile" 
-                            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl"
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Card className="border-none shadow-2xl shadow-gray-200/50 overflow-hidden rounded-[35px]">
+                  <CardContent className="p-0">
+                    <div className={`h-24 bg-gradient-to-r ${isTechnician ? 'from-green-500 to-emerald-600' : 'from-blue-500 to-indigo-600'}`}></div>
+                    <div className="px-6 pb-8 -mt-12 text-center">
+                      <div className="relative inline-block mb-4">
+                        {profileImageUrl ? (
+                          <img
+                            src={profileImageUrl}
+                            alt={userData?.username}
+                            className={`w-32 h-32 rounded-[2.5rem] object-cover border-4 border-white shadow-2xl bg-white transition-opacity ${isEditing ? 'opacity-80' : ''}`}
                           />
                         ) : (
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl">
-                            {user.username?.charAt(0).toUpperCase() || userData?.username?.charAt(0).toUpperCase()}
+                          <div className={`w-32 h-32 rounded-[2.5rem] bg-gradient-to-br ${isTechnician ? 'from-green-500 to-emerald-600' : 'from-blue-500 to-indigo-600'} flex items-center justify-center text-white text-4xl font-black border-4 border-white shadow-2xl transition-opacity ${isEditing ? 'opacity-80' : ''}`}>
+                            {userData?.username?.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        {isTechnician && technicianData?.isVerified && (
-                          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1 border-2 border-white">
-                            <Verified className="h-4 w-4 text-white" />
-                        </div>
+                        {isTechnician && !!technicianData?.isVerified && !isEditing && (
+                          <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2 border-4 border-white shadow-lg">
+                            <ShieldCheck className="h-5 w-5 text-white" />
+                          </div>
                         )}
-                        {!isTechnician && (
-                        <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
+                        {isEditing && (
+                          <button
+                            onClick={() => profileInputRef.current?.click()}
+                            className="absolute inset-0 flex flex-col items-center justify-center rounded-[2.5rem] bg-black/40 text-white hover:bg-black/50 transition-colors"
+                          >
+                            <ImageIcon className="h-6 w-6 mb-1" />
+                            <span className="text-[10px] font-bold tracking-wider">อัปโหลด</span>
+                          </button>
+                        )}
+                        <input
+                          type="file"
+                          ref={profileInputRef}
+                          onChange={handleProfileImageChange}
+                          className="hidden"
+                          accept="image/*"
+                        />
+                      </div>
+
+                      <h2 className="text-2xl font-black text-gray-900 mb-1">{userData?.firstName ? `${userData.firstName} ${userData.lastName}` : userData?.username}</h2>
+                      <p className="text-gray-400 text-sm font-medium mb-6">@{userData?.username}</p>
+
+                      {isTechnician && (
+                        <div className="flex items-center justify-center gap-4 mb-8 py-4 bg-gray-50 rounded-2xl border border-gray-100">
+                          <div className="text-center">
+                            <p className="text-xl font-black text-gray-900">{(Number(technicianData?.rating) || 0).toFixed(1)}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Rating</p>
+                          </div>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="text-center">
+                            <p className="text-xl font-black text-gray-900">{technicianData?.totalJobs || 0}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Jobs</p>
+                          </div>
+                          <div className="w-px h-8 bg-gray-200"></div>
+                          <div className="text-center">
+                            <p className="text-xl font-black text-gray-900">{technicianData?.totalReviews || 0}</p>
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Reviews</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        <Button
+                          onClick={() => setIsEditing(!isEditing)}
+                          className={`w-full ${isEditing ? 'bg-red-50 text-red-600 hover:bg-red-100 border-red-100' : 'bg-gray-900 hover:bg-black text-white'} py-6 rounded-2xl shadow-xl transition-all font-bold`}
+                        >
+                          {isEditing ? <><X className="mr-2 h-4 w-4" /> ยกเลิกการแก้ไข</> : <><Edit className="mr-2 h-4 w-4" /> แก้ไขโปรไฟล์</>}
+                        </Button>
+                        {isTechnician && (
+                          <Button
+                            onClick={() => navigate(`/good-workers/${userData.id}`)}
+                            variant="outline"
+                            className="w-full py-6 rounded-2xl border-gray-200 font-bold hover:bg-gray-50"
+                          >
+                            <Share2 className="mr-2 h-4 w-4" /> ดูหน้าร้านของฉัน
+                          </Button>
                         )}
                       </div>
                     </div>
 
-                    {/* User Info Form */}
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="username" className="flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          ชื่อผู้ใช้
-                        </Label>
-                        <Input
-                          id="username"
-                          name="username"
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                          className={!isEditing ? 'bg-gray-50' : ''}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          อีเมล
-                        </Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          disabled={!isEditing}
-                          className={!isEditing ? 'bg-gray-50' : ''}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
-                          บทบาท
-                        </Label>
-                        <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-300">
-                          <Badge variant="secondary" className={isTechnician ? 'bg-green-100 text-green-800' : ''}>
-                            {user?.role === 'admin' ? 'ผู้ดูแลระบบ' : 
-                             isTechnician ? 'ช่าง' : 'ผู้ใช้ทั่วไป'}
-                          </Badge>
+                    <div className="bg-gray-50 p-8 space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4 text-gray-600">
+                          <div className="h-10 w-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-blue-500">
+                            <Mail className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Email Address</p>
+                            <p className="text-sm font-bold text-gray-800">{userData?.email}</p>
+                          </div>
+                        </div>
+                        {userData?.phone && (
+                          <div className="flex items-center gap-4 text-gray-600">
+                            <div className="h-10 w-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-green-500">
+                              <Phone className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Phone Number</p>
+                              <p className="text-sm font-bold text-gray-800">{userData?.phone}</p>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-4 text-gray-600">
+                          <div className="h-10 w-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-purple-500">
+                            <Shield className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Account Status</p>
+                            <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-tighter">
+                              {userData?.role}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-                      {/* Technician specific fields */}
-                      {isTechnician && (
-                        <>
-                          {formData.firstName && (
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <User className="h-4 w-4" />
-                                ชื่อ-นามสกุล
-                              </Label>
-                              <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-300 text-sm text-gray-700">
-                                {formData.firstName} {formData.lastName}
-                              </div>
-                            </div>
-                          )}
+              {isTechnician && !!technicianData?.isVerified && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-green-600 p-6 rounded-[30px] text-white shadow-2xl shadow-green-100"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <ShieldCheck className="h-7 w-7" />
+                    <h3 className="font-black text-lg">ยืนยันตัวตนแล้ว</h3>
+                  </div>
+                  <p className="text-white/80 text-xs leading-relaxed font-light">
+                    คุณได้ผ่านการตรวจสอบบัตรประชาชนและประวัติการทำงานเรียบร้อยแล้ว โปรไฟล์ของคุณจะได้รับความน่าเชื่อถือสูงกว่าปกติ
+                  </p>
+                </motion.div>
+              )}
+            </div>
 
-                          {formData.phone && (
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <Phone className="h-4 w-4" />
-                                เบอร์โทรศัพท์
-                              </Label>
-                              <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-300 text-sm text-gray-700">
-                                {formData.phone}
-                              </div>
-                            </div>
-                          )}
+            {/* Right Column: Settings & Data */}
+            <div className="lg:col-span-2 space-y-6">
 
-                          {formData.lineId && (
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <MessageCircle className="h-4 w-4" />
-                                Line ID
-                              </Label>
-                              <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-300 text-sm text-gray-700">
-                                {formData.lineId}
-                              </div>
-                            </div>
-                          )}
+              <Card className="border-none shadow-2xl shadow-gray-200/50 rounded-[35px] overflow-hidden">
+                <Tabs defaultValue={isEditing ? "settings" : "overview"} className="w-full">
+                  <CardHeader className="bg-white pb-0 px-8 pt-6">
+                    <TabsList className="w-full justify-start gap-8 bg-transparent h-12 p-0 border-b rounded-none mb-0">
+                      <TabsTrigger
+                        value="overview"
+                        className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none px-0 h-12 text-sm font-bold uppercase tracking-wider text-gray-400 data-[state=active]:text-blue-600"
+                      >
+                        {isTechnician ? 'ผลงาน & รีวิว' : 'ภาพรวมบัญชี'}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="settings"
+                        className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none px-0 h-12 text-sm font-bold uppercase tracking-wider text-gray-400 data-[state=active]:text-blue-600"
+                      >
+                        ตั้งค่าข้อมูลส่วนตัว
+                      </TabsTrigger>
+                    </TabsList>
+                  </CardHeader>
 
-                          {formData.facebookLink && (
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <Link2 className="h-4 w-4" />
-                                Facebook
-                              </Label>
-                              <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-300">
-                                <a 
-                                  href={formData.facebookLink} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline text-sm"
-                                >
-                                  {formData.facebookLink}
-                                </a>
-                              </div>
-                            </div>
-                          )}
-
-                          {((technicianData?.workTypes && technicianData.workTypes.length > 0) || 
-                            (user?.workTypes && user.workTypes.length > 0)) && (
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <Briefcase className="h-4 w-4" />
-                                ประเภทงานที่รับ
-                              </Label>
+                  <CardContent className="p-8">
+                    <TabsContent value="overview" className="mt-0">
+                      {isTechnician ? (
+                        <div className="space-y-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 relative overflow-hidden group">
+                              <Award className="absolute -right-4 -bottom-4 h-24 w-24 text-blue-500/10 group-hover:scale-110 transition-transform" />
+                              <h4 className="font-black text-blue-900 mb-2">ประเภทงานของคุณ</h4>
                               <div className="flex flex-wrap gap-2">
-                                {(technicianData?.workTypes || user?.workTypes || []).map((workType, index) => (
-                                  <Badge key={index} variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                    {workType}
-                                  </Badge>
+                                {technicianData?.workTypes?.map((w, i) => (
+                                  <Badge key={i} className="bg-white text-blue-700 hover:bg-white border-none shadow-sm text-xs px-3">{w}</Badge>
                                 ))}
                               </div>
                             </div>
-                          )}
-                        </>
-                      )}
+                            <div className="p-6 bg-purple-50 rounded-3xl border border-purple-100 relative overflow-hidden group">
+                              <TrendingUp className="absolute -right-4 -bottom-4 h-24 w-24 text-purple-500/10 group-hover:scale-110 transition-transform" />
+                              <h4 className="font-black text-purple-900 mb-2">สถิติระบบ</h4>
+                              <p className="text-xs text-purple-700/70 font-medium">คุณมีรีวิวใหม่ 0 รายการในสัปดาห์นี้</p>
+                            </div>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          เข้าร่วมเมื่อ
-                        </Label>
-                        <div className="px-3 py-2 bg-gray-50 rounded-md border border-gray-300 text-sm text-gray-700">
-                          19 พฤศจิกายน 2025
-                        </div>
-                      </div>
-                    </div>
+                          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                            <div className="flex justify-between items-center mb-6">
+                              <h3 className="font-black text-lg text-gray-900">จัดการผลงาน (Projects)</h3>
+                            </div>
 
-                    {/* Action Buttons */}
-                    <div className="pt-4 space-y-2">
-                      {isEditing ? (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleSave}
-                            className="flex-1 bg-gray-900 hover:bg-gray-800"
-                          >
-                            <Save className="mr-2 h-4 w-4" />
-                            บันทึก
-                          </Button>
-                          <Button
-                            onClick={handleCancel}
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            <X className="mr-2 h-4 w-4" />
-                            ยกเลิก
-                          </Button>
+                            <div className="space-y-6">
+                              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                <h4 className="font-bold text-gray-900 text-sm mb-4 flex items-center gap-2">
+                                  <Plus className="h-4 w-4 text-blue-500" /> เพิ่มผลงานใหม่
+                                </h4>
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input
+                                      placeholder="ชื่อผลงาน เช่น งานเดินลอยท่อ, ซ่อมปั๊มน้ำ..."
+                                      value={uploadData.title}
+                                      onChange={(e) => setUploadData(prev => ({ ...prev, title: e.target.value }))}
+                                      className="rounded-xl border-gray-200"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleUploadClick}
+                                        className="rounded-xl border-gray-200 bg-white"
+                                      >
+                                        <ImageIcon className="mr-2 h-4 w-4" /> เลือกรูปภาพ
+                                      </Button>
+                                      <span className="text-xs text-gray-500 truncate max-w-[150px]">
+                                        {uploadData.image ? uploadData.image.name : 'ยังไม่เลือกรูป'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                    accept="image/*"
+                                  />
+                                  <Textarea
+                                    placeholder="รายละเอียดผลงานสั้นๆ เล่าเกี่ยวกับสิ่งที่คุณทำได้เลย..."
+                                    value={uploadData.description}
+                                    onChange={(e) => setUploadData(prev => ({ ...prev, description: e.target.value }))}
+                                    className="rounded-xl border-gray-200 resize-none h-20"
+                                  />
+                                  <Button
+                                    onClick={handleAddPortfolio}
+                                    disabled={isUploading || !uploadData.image}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
+                                  >
+                                    {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                                    อัปโหลดผลงาน
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {portfolios.map(item => {
+                                  const imgUrl = item.image_url.startsWith('http')
+                                    ? item.image_url
+                                    : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5002'}${item.image_url}`;
+                                  return (
+                                    <div key={item.id} className="relative group overflow-hidden rounded-2xl border border-gray-100 shadow-sm">
+                                      <div className="aspect-[4/3] bg-gray-100 overflow-hidden">
+                                        <img src={imgUrl} alt={item.title || 'ผลงาน'} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                      </div>
+                                      <div className="p-4 bg-white">
+                                        <h4 className="font-bold text-gray-900 text-sm truncate">{item.title || 'ไม่มีชื่อผลงาน'}</h4>
+                                        <p className="text-xs text-gray-500 line-clamp-2 mt-1">{item.description}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeletePortfolio(item.id)}
+                                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )
+                                })}
+                                {portfolios.length === 0 && (
+                                  <div className="col-span-1 md:col-span-2 text-center py-10 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-100">
+                                    <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-gray-400 text-sm max-w-xs mx-auto">ยังไม่มีผลงาน เพิ่มรูปภาพผลงานของคุณให้ลูกค้าเห็นได้ง่ายขึ้น</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        <Button
-                          onClick={() => setIsEditing(true)}
-                          variant="outline"
-                          className="w-full border-gray-900 hover:bg-gray-900 hover:text-white"
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          แก้ไขข้อมูล
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Actions */}
-              <Card className="border-2 border-gray-300 shadow-lg">
-                <CardHeader className="bg-gray-50">
-                  <CardTitle className="text-lg">การกระทำด่วน</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-2">
-                  {isTechnician ? (
-                    <>
-                      <Button 
-                        onClick={() => navigate('/good-workers')}
-                        className="w-full bg-green-600 hover:bg-green-700"
-                      >
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        ดูโปรไฟล์ของฉัน
-                      </Button>
-                      <Button 
-                        onClick={() => navigate('/')}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        ดูรายชื่อบัญชีดำ
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                  <Button 
-                    onClick={() => navigate('/report')}
-                    className="w-full bg-red-600 hover:bg-red-700"
-                  >
-                    <AlertTriangle className="mr-2 h-4 w-4" />
-                    แจ้งแบล็คลิสต์ใหม่
-                  </Button>
-                  <Button 
-                    onClick={() => navigate('/')}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    ดูรายชื่อบัญชีดำ
-                  </Button>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column - Reports & Stats */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Technician Stats */}
-              {isTechnician && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <Card className="border-2 border-green-500 bg-green-50">
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <Star className="h-8 w-8 mx-auto mb-2 text-green-700" />
-                        <div className="text-2xl font-bold text-green-900">
-                          {(technicianData?.rating || 0).toFixed(1)}
-                        </div>
-                        <div className="text-xs text-green-700 mt-1">คะแนนเฉลี่ย</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-2 border-blue-500 bg-blue-50">
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <FileText className="h-8 w-8 mx-auto mb-2 text-blue-700" />
-                        <div className="text-2xl font-bold text-blue-900">
-                          {technicianData?.totalReviews || 0}
-                        </div>
-                        <div className="text-xs text-blue-700 mt-1">รีวิวทั้งหมด</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-2 border-purple-500 bg-purple-50">
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <Briefcase className="h-8 w-8 mx-auto mb-2 text-purple-700" />
-                        <div className="text-2xl font-bold text-purple-900">
-                          {technicianData?.totalJobs || 0}
-                        </div>
-                        <div className="text-xs text-purple-700 mt-1">งานที่ทำ</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className={`border-2 ${technicianData?.isVerified ? 'border-green-500 bg-green-50' : 'border-yellow-500 bg-yellow-50'}`}>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        {technicianData?.isVerified ? (
-                          <>
-                            <Verified className="h-8 w-8 mx-auto mb-2 text-green-700" />
-                            <div className="text-sm font-bold text-green-900">ยืนยันตัวตนแล้ว</div>
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="h-8 w-8 mx-auto mb-2 text-yellow-700" />
-                            <div className="text-sm font-bold text-yellow-900">รอยืนยัน</div>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-2 border-gray-900">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <FileText className="h-8 w-8 mx-auto mb-2 text-gray-900" />
-                      <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-                      <div className="text-xs text-gray-600 mt-1">รายงานทั้งหมด</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 border-yellow-500 bg-yellow-50">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <Clock className="h-8 w-8 mx-auto mb-2 text-yellow-700" />
-                      <div className="text-2xl font-bold text-yellow-900">{stats.pending}</div>
-                      <div className="text-xs text-yellow-700 mt-1">รอตรวจสอบ</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 border-green-500 bg-green-50">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-700" />
-                      <div className="text-2xl font-bold text-green-900">{stats.approved}</div>
-                      <div className="text-xs text-green-700 mt-1">อนุมัติแล้ว</div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-2 border-red-500 bg-red-50">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <XCircle className="h-8 w-8 mx-auto mb-2 text-red-700" />
-                      <div className="text-2xl font-bold text-red-900">{stats.rejected}</div>
-                      <div className="text-xs text-red-700 mt-1">ปฏิเสธ</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Reports History or Technician Profile */}
-              <Card className="border-2 border-gray-900 shadow-xl">
-                <CardHeader className="bg-gray-900 text-white">
-                  <CardTitle className="flex items-center gap-2">
-                    {isTechnician ? (
-                      <>
-                        <Briefcase className="h-5 w-5" />
-                        โปรไฟล์ช่าง
-                      </>
-                    ) : (
-                      <>
-                    <FileText className="h-5 w-5" />
-                    ประวัติการแจ้งของฉัน
-                      </>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-gray-300">
-                    {isTechnician 
-                      ? 'ข้อมูลโปรไฟล์ช่างของคุณ' 
-                      : 'รายการแจ้งแบล็คลิสต์ที่คุณส่งมา'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  {isTechnician ? (
-                    <div className="space-y-6">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5" />
-                          สถิติการทำงาน
-                        </h3>
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                          <div>
-                            <div className="text-2xl font-bold text-green-900">
-                              {(technicianData?.rating || 0).toFixed(1)}
-                            </div>
-                            <div className="text-xs text-green-700 mt-1">คะแนน</div>
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-green-900">
-                              {technicianData?.totalReviews || 0}
-                            </div>
-                            <div className="text-xs text-green-700 mt-1">รีวิว</div>
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-green-900">
-                              {technicianData?.totalJobs || 0}
-                            </div>
-                            <div className="text-xs text-green-700 mt-1">งาน</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {((technicianData?.workTypes && technicianData.workTypes.length > 0) || 
-                        (user?.workTypes && user.workTypes.length > 0)) && (
-                        <div>
-                          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                            <Briefcase className="h-5 w-5" />
-                            ประเภทงานที่รับ
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {(technicianData?.workTypes || user?.workTypes || []).map((workType, index) => (
-                              <Badge key={index} className="bg-green-100 text-green-800 border-green-300 px-3 py-1">
-                                {workType}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {(!technicianData?.workTypes || technicianData.workTypes.length === 0) && 
-                       (!user?.workTypes || user.workTypes.length === 0) && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <p className="text-sm text-yellow-900">
-                            <strong>หมายเหตุ:</strong> คุณยังไม่ได้เลือกประเภทงานที่รับ กรุณาแก้ไขข้อมูลเพื่อเพิ่มประเภทงาน
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-sm text-blue-900">
-                          <strong>หมายเหตุ:</strong> โปรไฟล์ของคุณจะแสดงในระบบช่างรับงานดี 
-                          {technicianData?.isVerified 
-                            ? ' และได้รับการยืนยันตัวตนแล้ว' 
-                            : ' หลังจากยืนยันตัวตนแล้ว'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : userReports.length > 0 ? (
-                    <div className="space-y-4">
-                      {userReports.map((report) => (
-                        <motion.div
-                          key={report.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="border-2 border-gray-200 rounded-lg p-4 hover:border-gray-900 transition-all duration-300 hover:shadow-md"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="font-bold text-gray-900 truncate">
-                                  {report.technicianName}
-                                </h3>
-                                {getStatusBadge(report.status)}
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                                {report.offense}
-                              </p>
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
-                                <Calendar className="h-3 w-3" />
-                                <span>แจ้งเมื่อ: {report.date}</span>
-                              </div>
-                            </div>
+                        <div className="space-y-6">
+                          <div className="flex items-center justify-between px-2">
+                            <h3 className="text-xl font-black text-gray-900">ประวัติการแจ้งข่าวของคุณ</h3>
                             <Button
+                              onClick={() => navigate('/report')}
                               size="sm"
-                              variant="outline"
-                              onClick={() => navigate(`/detail/${report.id}`)}
-                              className="flex-shrink-0"
+                              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold"
                             >
-                              ดูรายละเอียด
+                              <AlertTriangle className="mr-2 h-4 w-4" /> แจ้งรายชื่อใหม่
                             </Button>
                           </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-gray-500">
-                      <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                      <p className="font-medium text-lg mb-2">ยังไม่มีรายการแจ้ง</p>
-                      <p className="text-sm mb-4">คุณยังไม่เคยแจ้งรายงานใดๆ ในระบบ</p>
-                      <Button 
-                        onClick={() => navigate('/report')}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        <AlertTriangle className="mr-2 h-4 w-4" />
-                        แจ้งแบล็คลิสต์ตอนนี้
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
+
+                          <div className="text-center py-20 bg-gray-50 rounded-[30px] border-2 border-dashed border-gray-100">
+                            <FileText className="h-16 w-16 text-gray-200 mx-auto mb-4" />
+                            <h3 className="font-black text-gray-900 mb-1">ยังไม่มีประวัติการแจ้ง</h3>
+                            <p className="text-gray-400 text-sm max-w-xs mx-auto">ขอบคุณที่เป็นส่วนหนึ่งในการช่วยให้สังคมการจ้างช่างปลอดภัยขึ้น</p>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="settings" className="mt-0">
+                      <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Username</Label>
+                            <Input
+                              name="username"
+                              value={formData.username}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="rounded-2xl border-gray-100 h-14 font-bold focus:ring-blue-500"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email Address</Label>
+                            <Input
+                              name="email"
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="rounded-2xl border-gray-100 h-14 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">ชื่อ (First Name)</Label>
+                            <Input
+                              name="firstName"
+                              value={formData.firstName}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="rounded-2xl border-gray-100 h-14 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">นามสกุล (Last Name)</Label>
+                            <Input
+                              name="lastName"
+                              value={formData.lastName}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="rounded-2xl border-gray-100 h-14 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">เบอร์โทรศัพท์</Label>
+                            <Input
+                              name="phone"
+                              value={formData.phone}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="rounded-2xl border-gray-100 h-14 font-bold"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Line ID</Label>
+                            <Input
+                              name="lineId"
+                              value={formData.lineId}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="rounded-2xl border-gray-100 h-14 font-bold"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Facebook Profile Link</Label>
+                          <Input
+                            name="facebookLink"
+                            value={formData.facebookLink}
+                            onChange={handleInputChange}
+                            disabled={!isEditing}
+                            placeholder="https://facebook.com/your-profile"
+                            className="rounded-2xl border-gray-100 h-14 font-bold"
+                          />
+                        </div>
+
+                        {isTechnician && (
+                          <div className="space-y-4 pt-4 border-t border-gray-100">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">ประเภทงานที่คุณรับ (กด Enter เพื่อเพิ่ม)</Label>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {formData.workTypes.map((type, idx) => (
+                                <Badge key={idx} className="bg-green-100 text-green-700 hover:bg-green-200 border-none px-3 py-1 flex items-center gap-2">
+                                  {type}
+                                  {isEditing && (
+                                    <X
+                                      className="h-3 w-3 cursor-pointer"
+                                      onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        workTypes: prev.workTypes.filter((_, i) => i !== idx)
+                                      }))}
+                                    />
+                                  )}
+                                </Badge>
+                              ))}
+                            </div>
+                            {isEditing && (
+                              <Input
+                                placeholder="เพิ่มประเภทงาน เช่น ช่างไฟฟ้า, ช่างประปา..."
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const val = e.target.value.trim();
+                                    if (val && !formData.workTypes.includes(val)) {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        workTypes: [...prev.workTypes, val]
+                                      }));
+                                      e.target.value = '';
+                                    }
+                                  }
+                                }}
+                                className="rounded-2xl border-gray-100 h-14 font-bold"
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {isTechnician && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">จังหวัดที่รับงาน (Province)</Label>
+                              <Input
+                                name="province"
+                                value={formData.province}
+                                onChange={handleInputChange}
+                                disabled={!isEditing}
+                                placeholder="เช่น กรุงเทพมหานคร, เชียงใหม่..."
+                                className="rounded-2xl border-gray-100 py-6 font-medium"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">แนะนำตัวเอง (Bio)</Label>
+                              <Textarea
+                                name="bio"
+                                value={formData.bio}
+                                onChange={handleInputChange}
+                                disabled={!isEditing}
+                                placeholder="แนะนำตัวเองสั้นๆ เพื่อให้ลูกค้ารู้จักคุณมากขึ้น..."
+                                className="rounded-2xl border-gray-100 min-h-[120px] font-medium leading-relaxed"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {isEditing && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="pt-4 flex gap-4"
+                          >
+                            <Button
+                              type="submit"
+                              disabled={isSaving}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-8 font-black text-lg shadow-2xl shadow-blue-100"
+                            >
+                              {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />}
+                              บันทึกการเปลี่ยนแปลงทั้งหมด
+                            </Button>
+                          </motion.div>
+                        )}
+                      </form>
+                    </TabsContent>
+                  </CardContent>
+                </Tabs>
               </Card>
 
-              {/* Info Card */}
-              <Card className="border-2 border-blue-500 bg-blue-50">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-900">
-                      <p className="font-semibold mb-1">หมายเหตุ:</p>
-                      <ul className="list-disc list-inside space-y-1 text-xs">
-                        <li>รายงานที่ส่งจะถูกตรวจสอบโดยทีมงานก่อนเผยแพร่</li>
-                        <li>คุณสามารถตรวจสอบสถานะรายงานได้ที่หน้านี้</li>
-                        <li>หากมีข้อสงสัย กรุณาติดต่อทีมงาน</li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="bg-blue-50 border border-blue-100 p-8 rounded-[35px] flex flex-col md:flex-row items-center gap-6">
+                <div className="h-16 w-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-blue-600 shrink-0">
+                  <ShieldCheck className="h-8 w-8" />
+                </div>
+                <div className="text-center md:text-left">
+                  <h4 className="font-extrabold text-blue-900 text-lg mb-1">รักษาข้อมูลของคุณให้เป็นปัจจุบัน</h4>
+                  <p className="text-blue-700/60 text-sm leading-relaxed">การอัปเดตข้อมูลการติดต่อที่ถูกต้องจะช่วยให้ลูกค้าสามารถเข้าถึงคุณได้ง่ายขึ้น และเพิ่มโอกาสในการรับงานที่มากขึ้น</p>
+                </div>
+              </div>
+
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </>
   );

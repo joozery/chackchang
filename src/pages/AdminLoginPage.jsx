@@ -25,17 +25,14 @@ export function AdminLoginPage() {
     setError('');
     setLoading(true);
 
-    // Simulate authentication check
-    setTimeout(() => {
-      // In real app, check if user is admin
-      if (username === 'admin' && password === 'admin') {
-        login(username, password);
-        navigate('/dashboard');
-      } else {
-        setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง หรือคุณไม่มีสิทธิ์เข้าถึงระบบผู้ดูแล');
-      }
+    try {
+      await login(username, password);
+      // login handles navigation
+    } catch (err) {
+      setError(err.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -55,8 +52,8 @@ export function AdminLoginPage() {
         </div>
 
         {/* Back to Home Button */}
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="absolute top-4 left-4 text-white/80 hover:text-white transition-colors flex items-center gap-1.5 group z-10"
         >
           <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-1 transition-transform" />
